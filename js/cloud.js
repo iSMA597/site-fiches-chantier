@@ -2,6 +2,7 @@
  * Euro Sanichauff – connexion à la plateforme (Projet 4, ADR-0011 / ADR-0012)
  * Session persistante, registre en cache (hors ligne), boîte d'envoi IndexedDB, appels serveur.
  * Inactif si js/config.js ne définit pas l'adresse du serveur : l'appli reste alors en mode « local » (Projet 3).
+ * Revu après l'audit ECC (04/10/2026) : ouverture hors ligne, file d'envoi jamais bloquée, versions, déconnexion propre.
  */
 (function (root) {
   'use strict';
@@ -10,36 +11,70 @@
   var actif = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && root.supabase && root.idbKeyval);
   var idb = root.idbKeyval;
   var K = { outbox: 'es_outbox', registre: 'es_registre', profil: 'es_profil' };
+  var DELAI_MS = 45000;
+
+  // chaque appel réseau est limité dans le temps (réseau de chantier instable)
+  function fetchAvecDelai(url, opts) {
+    var ctrl = new AbortController();
+    var t = setTimeout(function () { ctrl.abort(); }, DELAI_MS);
+    opts = Object.assign({}, opts || {});
+    if (opts.signal) opts.signal.addEventListener('abort', function () { ctrl.abort(); });
+    opts.signal = ctrl.signal;
+    return fetch(url, opts).finally(function () { clearTimeout(t); });
+  }
   var sb = actif ? root.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'es_auth', detectSessionInUrl: false }
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'es_auth', detectSessionInUrl: false },
+    global: { fetch: fetchAvecDelai }
   }) : null;
   var ecouteurs = [];
-  var syncEnCours = false;
+  var syncCourante = null;          // verrou : une seule synchronisation à la fois
 
   // ------------------------------------------------------------ erreurs lisibles
+  function estReseau(err) {
+    var m = (err && (err.message || String(err))) || '';
+    return /Failed to fetch|NetworkError|Load failed|network|fetch|abort/i.test(m) || (err && err.status === 0) ||
+      (err && err.name === 'AbortError');
+  }
+  function estSession(err) {
+    var m = (err && (err.message || String(err))) || '';
+    return /JWT|refresh token|session|PGRST30/i.test(m);
+  }
   function traduire(err) {
     if (!err) return new Error('Erreur inconnue');
     var m = err.message || String(err);
-    if (/Invalid login credentials/i.test(m)) m = 'Email ou mot de passe incorrect.';
+    if (/Invalid login credentials/i.test(m)) m = 'Identifiant ou mot de passe incorrect.';
     else if (/Email not confirmed/i.test(m)) m = 'Compte non activé : contactez le bureau.';
-    else if (/Failed to fetch|NetworkError|Load failed/i.test(m)) m = 'Pas de connexion au serveur.';
-    else if (/JWT|refresh token/i.test(m)) m = 'Session expirée : reconnectez-vous.';
+    else if (estReseau(err)) m = 'Pas de connexion au serveur.';
+    else if (estSession(err)) m = 'Session expirée : reconnectez-vous.';
     var e = new Error(m);
     e.code = err.code;
+    e.hint = err.hint;
     e.reseau = estReseau(err);
+    e.session = estSession(err);
     return e;
-  }
-  function estReseau(err) {
-    var m = (err && (err.message || String(err))) || '';
-    return /Failed to fetch|NetworkError|Load failed|network|fetch/i.test(m) || (err && err.status === 0);
   }
   function verifier(r) { if (r.error) throw traduire(r.error); return r.data; }
 
   // ------------------------------------------------------------ session / profil
   async function session() {
     if (!sb) return null;
-    var r = await sb.auth.getSession();
-    return r.data && r.data.session;
+    try { var r = await sb.auth.getSession(); return r.data && r.data.session; } catch (e) { return null; }
+  }
+  function sessionStockee() {
+    try { return !!localStorage.getItem('es_auth'); } catch (e) { return false; }
+  }
+  // 'ok' : connecté · 'hors_ligne' : session gardée sur l'appareil mais serveur injoignable · 'absente' : se connecter
+  async function etatSession() {
+    if (!sb) return 'absente';
+    var r;
+    try { r = await sb.auth.getSession(); } catch (e) { r = { error: e }; }
+    if (r && r.data && r.data.session) return 'ok';
+    if (!sessionStockee()) return 'absente';
+    if (!navigator.onLine || (r && r.error && estReseau(r.error))) return 'hors_ligne';
+    // en ligne mais rafraîchissement refusé : on vérifie une fois de plus avant de demander la reconnexion
+    try { var u = await sb.auth.refreshSession(); if (u.data && u.data.session) return 'ok'; if (u.error && estReseau(u.error)) return 'hors_ligne'; }
+    catch (e) { if (estReseau(e)) return 'hors_ligne'; }
+    return 'absente';
   }
   // identifiant simple (ex. « karim.b ») -> adresse technique ; une vraie adresse mail reste acceptée
   var DOMAINE = 'fiches.euro-sanichauff.fr';
@@ -52,23 +87,31 @@
   async function connexion(identifiant, mdp) {
     var r = await sb.auth.signInWithPassword({ email: versCourriel(identifiant), password: mdp });
     if (r.error) throw traduire(r.error);
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () { /* facultatif */ });
     return r.data.session;
   }
+  // déconnexion : rien ne reste sur un téléphone partagé (fiches non envoyées incluses, après confirmation côté écran)
   async function deconnexion() {
-    try { await sb.auth.signOut(); } catch (e) { /* hors ligne : session locale effacée quand même */ }
-    await idb.del(K.profil);
-    await idb.del(K.registre);
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* session locale effacée quand même */ }
+    var cles = [];
+    try { cles = await idb.keys(); } catch (e) { /* ignoré */ }
+    for (var i = 0; i < cles.length; i++) {
+      if (String(cles[i]).indexOf('es_') === 0) { try { await idb.del(cles[i]); } catch (e) { /* ignoré */ } }
+    }
+    try { ['es_draft', 'es_history', 'es_auth'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
+    notifier();
   }
   async function profil() {
     try {
       var s = await session();
+      if (!s) { var err = new Error('Pas de connexion au serveur.'); err.reseau = true; throw err; }
       var p = verifier(await sb.from('profiles').select('id,nom,role,actif').eq('id', s.user.id).single());
-      if (!p.actif) throw new Error('Compte désactivé : contactez le bureau.');
+      if (!p.actif) { var d = new Error('Compte désactivé : contactez le bureau.'); d.session = true; throw d; }
       await idb.set(K.profil, p);
       return p;
     } catch (e) {
       var cache = await idb.get(K.profil);
-      if (cache && (e.reseau || estReseau(e))) return cache;
+      if (cache && !e.session && !(e.code === 'PGRST116')) { cache.horsLigne = true; return cache; }
       throw e.message ? e : traduire(e);
     }
   }
@@ -77,6 +120,7 @@
   function parOrdre(a, b) { return (a.ordre - b.ordre) || String(a.nom).localeCompare(b.nom); }
   async function registre() {
     try {
+      if (!(await session())) throw Object.assign(new Error('hors ligne'), { reseau: true });
       var ch = verifier(await sb.from('chantiers')
         .select('id,nom,adresse,actif,batiments(id,nom,ordre,niveaux(id,num,nb_logements))')
         .eq('actif', true).order('nom'));
@@ -109,14 +153,26 @@
 
   // ------------------------------------------------------------ boîte d'envoi (jamais vidée avant accusé du serveur)
   async function outbox() { return (await idb.get(K.outbox)) || []; }
+  async function majOutbox(fn) {
+    var o = await outbox();
+    var r = fn(o) || o;
+    await idb.set(K.outbox, r);
+    return r;
+  }
   async function mettreEnFile(fiche) {
-    var o = (await outbox()).filter(function (x) { return x.id !== fiche.id; });
-    o.push({ id: fiche.id, fiche: JSON.parse(JSON.stringify(fiche)), ajout: Date.now(), essais: 0, erreur: null, conflit: false });
-    await idb.set(K.outbox, o);
+    var copie = JSON.parse(JSON.stringify(fiche));
+    copie.editeLe = copie.editeLe || new Date().toISOString();
+    await majOutbox(function (o) {
+      var avant = o.filter(function (x) { return x.id === fiche.id; })[0];
+      var reste = o.filter(function (x) { return x.id !== fiche.id; });
+      reste.push({ id: fiche.id, fiche: copie, ajout: Date.now(), essais: 0, erreur: null, conflit: false,
+        recue: false, essaisPhotos: 0, rev: ((avant && avant.rev) || 0) + 1 });
+      return reste;
+    });
     notifier();
   }
   async function retirer(id) {
-    await idb.set(K.outbox, (await outbox()).filter(function (x) { return x.id !== id; }));
+    await majOutbox(function (o) { return o.filter(function (x) { return x.id !== id; }); });
     notifier();
   }
   function versServeur(f) {
@@ -128,64 +184,103 @@
       controleur: f.controleur || '', observations: f.observations || '',
       items: f.items || {}, libres: f.libres || {}, signature: f.signature || '',
       signature_ratio: f.signatureRatio || '', remplace_id: f.remplace_id || '',
-      client_updated_at: new Date().toISOString()
+      client_updated_at: f.editeLe || new Date().toISOString()
     };
   }
-  async function synchroniser() {
-    var res = { envoyees: 0, erreurs: 0, restantes: 0, recues: [] };
-    if (!sb || syncEnCours) { res.restantes = (await outbox()).length; return res; }
-    if (!navigator.onLine || !(await session())) { res.restantes = (await outbox()).length; return res; }
-    syncEnCours = true;
+  // reporte la version serveur sur le brouillon en cours (évite qu'une modification ultérieure soit perdue)
+  function reporterVersion(row) {
     try {
-      var liste = await outbox();
-      for (var i = 0; i < liste.length; i++) {
-        var e = liste[i];
+      var d = JSON.parse(localStorage.getItem('es_draft') || 'null');
+      if (d && d.fiche && d.fiche.id === row.id) { d.fiche.serverVersion = row.version; localStorage.setItem('es_draft', JSON.stringify(d)); }
+    } catch (e) { /* ignoré */ }
+  }
+
+  function synchroniser() {
+    // une synchro déjà lancée : on attend qu'elle finisse, puis on en relance une (nouvelles fiches éventuelles)
+    if (syncCourante) return syncCourante.then(function () { return synchroniser(); });
+    syncCourante = executerSync().finally(function () { syncCourante = null; });
+    return syncCourante;
+  }
+  async function executerSync() {
+    var res = { envoyees: 0, erreurs: 0, restantes: 0, recues: [], photosEchec: 0 };
+    if (!sb || !navigator.onLine || !(await session())) { res.restantes = (await outbox()).length; return res; }
+    var liste = await outbox();
+    for (var i = 0; i < liste.length; i++) {
+      var e = liste[i];
+      var rev = e.rev;
+      var row = null;
+      if (!e.recue) {
         var r = await sb.rpc('enregistrer_fiche', { f: versServeur(e.fiche) });
-        var courante = await outbox();
-        var ligne = courante.filter(function (x) { return x.id === e.id; })[0];
-        if (!ligne) continue;
-        if (r.error) {
-          if (estReseau(r.error)) break;                          // on réessaiera au retour du réseau
-          ligne.erreur = traduire(r.error).message;
-          ligne.conflit = r.error.code === 'P0001';
-          ligne.essais++;
-          res.erreurs++;
-          await idb.set(K.outbox, courante);
-        } else {
-          // photos (facultatives) : envoyées après la fiche ; la fiche reste en file tant qu'elles ne sont pas parties
-          var photosOK = await envoyerPhotos(e.fiche);
-          if (!photosOK) { break; }
-          courante = await outbox();
-          await idb.set(K.outbox, courante.filter(function (x) { return x.id !== e.id; }));
-          res.envoyees++;
-          res.recues.push(r.data);
+        if (r.error && r.error.code === 'P0001' && !e.fiche.serverVersion && /^version:\d+$/.test(r.error.hint || '')) {
+          // la fiche existe déjà (envoi précédent) et a été modifiée ici : on rejoue avec la version du serveur
+          e.fiche.serverVersion = parseInt(r.error.hint.split(':')[1], 10);
+          r = await sb.rpc('enregistrer_fiche', { f: versServeur(e.fiche) });
         }
+        if (r.error) {
+          if (estReseau(r.error) || estSession(r.error)) break;    // transitoire : on réessaiera
+          await majOutbox(function (o) {
+            o.forEach(function (x) {
+              if (x.id === e.id && x.rev === rev) { x.erreur = traduire(r.error).message; x.conflit = r.error.code === 'P0001'; x.essais++; }
+            });
+          });
+          res.erreurs++;
+          continue;
+        }
+        row = r.data;
+        reporterVersion(row);
+        await majOutbox(function (o) {
+          o.forEach(function (x) { if (x.id === e.id && x.rev === rev) { x.recue = true; x.fiche.serverVersion = row.version; x.erreur = null; } });
+        });
+        res.recues.push(row);
       }
-    } finally {
-      syncEnCours = false;
-      res.restantes = (await outbox()).length;
-      notifier(res);
+      // photos (facultatives) : un échec ne bloque jamais les fiches suivantes
+      var p = await envoyerPhotos(e.fiche);
+      if (p === 'reseau') break;
+      if (p === 'ok') {
+        await majOutbox(function (o) { return o.filter(function (x) { return !(x.id === e.id && x.rev === rev); }); });
+        try { await idb.del(clePhotos(e.id)); } catch (err) { /* ignoré */ }
+        res.envoyees++;
+      } else {
+        await majOutbox(function (o) {
+          return o.filter(function (x) {
+            if (x.id !== e.id || x.rev !== rev) return true;
+            x.essaisPhotos = (x.essaisPhotos || 0) + 1;
+            x.erreur = 'Fiche reçue, photos non envoyées : ' + p;
+            return x.essaisPhotos < 3;              // après 3 essais : fiche retirée (elle est déjà sur le serveur)
+          });
+        });
+        res.photosEchec++;
+      }
     }
+    res.restantes = (await outbox()).length;
+    notifier(res);
     return res;
   }
+  function surChangement(fn) { ecouteurs.push(fn); }
+  function notifier(info) { ecouteurs.forEach(function (fn) { try { fn(info); } catch (e) { /* ignoré */ } }); }
+
   // ------------------------------------------------------------ photos des fiches (IndexedDB -> Storage)
   function clePhotos(ficheId) { return 'es_photos_' + ficheId; }
   async function photos(ficheId) { return (await idb.get(clePhotos(ficheId))) || []; }
   async function enregistrerPhotos(ficheId, liste) { await idb.set(clePhotos(ficheId), liste); }
+  async function supprimerPhotos(ficheId) { try { await idb.del(clePhotos(ficheId)); } catch (e) { /* ignoré */ } }
+  // 'ok' | 'reseau' | message d'erreur
   async function envoyerPhotos(f) {
     var liste = await photos(f.id);
     for (var i = 0; i < liste.length; i++) {
       var p = liste[i];
       if (p.envoyee) continue;
       var chemin = f.chantier_id + '/' + f.id + '/' + p.id + '.jpg';
-      var up = await sb.storage.from('photos').upload(chemin, p.blob, { contentType: 'image/jpeg', upsert: true });
-      if (up.error && !/exists|Duplicate/i.test(up.error.message)) return false;
+      var up = await sb.storage.from('photos').upload(chemin, p.blob, { contentType: 'image/jpeg', upsert: false });
+      if (up.error && !/exist|duplicate|409/i.test(up.error.message + ' ' + (up.error.statusCode || ''))) {
+        return estReseau(up.error) ? 'reseau' : up.error.message;
+      }
       var ins = await sb.from('fiche_photos').insert({ fiche_id: f.id, chantier_id: f.chantier_id, chemin: chemin, legende: p.legende || null });
-      if (ins.error && ins.error.code !== '23505') return false;
+      if (ins.error && ins.error.code !== '23505') return estReseau(ins.error) ? 'reseau' : ins.error.message;
       p.envoyee = true;
       await enregistrerPhotos(f.id, liste);
     }
-    return true;
+    return 'ok';
   }
   async function photosServeur(ficheId) {
     var rows = verifier(await sb.from('fiche_photos').select('chemin,legende').eq('fiche_id', ficheId).order('created_at'));
@@ -196,9 +291,6 @@
     }
     return out;
   }
-
-  function surChangement(fn) { ecouteurs.push(fn); }
-  function notifier(info) { ecouteurs.forEach(function (fn) { try { fn(info); } catch (e) { /* ignoré */ } }); }
 
   // ------------------------------------------------------------ lecture / actions bureau
   async function tableauBord() { return verifier(await sb.from('v_tableau_bord').select('*').order('chantier')); }
@@ -230,12 +322,12 @@
   }
   async function changerMotDePasse(id, mdp) { return verifier(await sb.rpc('admin_changer_mot_de_passe', { pid: id, p_mot_de_passe: mdp })); }
 
-  // ------------------------------------------------------------ registre des salariés
-  async function personnel() { return verifier(await sb.from('personnel').select('*').order('nom')); }
+  // ------------------------------------------------------------ registre des salariés (téléphones : patron / conducteur)
+  async function personnel() { return verifier(await sb.rpc('personnel_complet')); }
   async function sauverPersonne(p) {
-    var row = { nom: p.nom, fonction: p.fonction, telephone: p.telephone || null, notes: p.notes || null, actif: p.actif !== false };
-    if (p.id) return verifier(await sb.from('personnel').update(row).eq('id', p.id).select().single());
-    return verifier(await sb.from('personnel').insert(row).select().single());
+    var row = { nom: p.nom.trim(), fonction: p.fonction, telephone: p.telephone || null, notes: p.notes || null, actif: p.actif !== false };
+    if (p.id) return verifier(await sb.from('personnel').update(row).eq('id', p.id).select('id').single());
+    return verifier(await sb.from('personnel').insert(row).select('id').single());
   }
 
   // ------------------------------------------------------------ chantiers (registre)
@@ -244,44 +336,64 @@
       .select('id,nom,adresse,client,debut,fin,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),affectations(profile_id)')
       .order('nom'));
   }
+  // structure : [{ bid?, batiment, num, nb }] — bid = bâtiment existant (renommage par identifiant, pas par nom)
   async function sauverChantier(c, structure, affectes) {
-    var row = { nom: c.nom, adresse: c.adresse || null, client: c.client || null, debut: c.debut || null, fin: c.fin || null,
+    structure.forEach(function (s) {
+      s.batiment = String(s.batiment || '').trim();
+      if (!s.batiment || !(s.num >= -3 && s.num <= 60) || !(s.nb >= 1 && s.nb <= 99)) {
+        throw new Error('Ligne de structure invalide : bâtiment obligatoire, niveau entre -3 et 60, 1 à 99 logements.');
+      }
+    });
+    var row = { nom: c.nom.trim(), adresse: c.adresse || null, client: c.client || null, debut: c.debut || null, fin: c.fin || null,
       conducteur_id: c.conducteur_id || null, actif: c.actif !== false };
     var ch = c.id ? verifier(await sb.from('chantiers').update(row).eq('id', c.id).select().single())
                   : verifier(await sb.from('chantiers').insert(row).select().single());
-    // structure : bâtiments (créés au besoin), niveaux (créés ou mis à jour), niveaux retirés supprimés si aucune fiche
-    var bats = verifier(await sb.from('batiments').select('id,nom,niveaux(id,num)').eq('chantier_id', ch.id));
-    var parNom = {}; bats.forEach(function (b) { parNom[b.nom] = b; });
-    var ordre = 0, gardes = {}, avert = [];
+    c.id = ch.id;                                 // un second clic après une erreur ne recrée pas le chantier
+    var bats = verifier(await sb.from('batiments').select('id,nom,ordre,niveaux(id,num)').eq('chantier_id', ch.id));
+    var parId = {}, parNom = {}, ordreMax = 0;
+    bats.forEach(function (b) { parId[b.id] = b; parNom[b.nom] = b; ordreMax = Math.max(ordreMax, b.ordre || 0); });
+    // renommages
+    for (var r = 0; r < structure.length; r++) {
+      var s0 = structure[r];
+      if (s0.bid && parId[s0.bid] && parId[s0.bid].nom !== s0.batiment) {
+        verifier(await sb.from('batiments').update({ nom: s0.batiment }).eq('id', s0.bid));
+        delete parNom[parId[s0.bid].nom];
+        parId[s0.bid].nom = s0.batiment;
+        parNom[s0.batiment] = parId[s0.bid];
+      }
+    }
+    var gardes = {}, batGardes = {}, avert = [];
     for (var i = 0; i < structure.length; i++) {
       var s = structure[i];
-      if (!parNom[s.batiment]) {
-        parNom[s.batiment] = verifier(await sb.from('batiments').insert({ chantier_id: ch.id, nom: s.batiment, ordre: ++ordre }).select('id,nom').single());
-        parNom[s.batiment].niveaux = [];
+      var b = (s.bid && parId[s.bid]) || parNom[s.batiment];
+      if (!b) {
+        b = verifier(await sb.from('batiments').insert({ chantier_id: ch.id, nom: s.batiment, ordre: ++ordreMax }).select('id,nom').single());
+        b.niveaux = [];
+        parNom[s.batiment] = b; parId[b.id] = b;
       }
-      var b = parNom[s.batiment];
+      batGardes[b.id] = true;
       var n = verifier(await sb.from('niveaux').upsert({ batiment_id: b.id, num: s.num, nb_logements: s.nb },
         { onConflict: 'batiment_id,num' }).select('id').single());
       gardes[n.id] = true;
     }
-    for (var nomB in parNom) {
-      var bb = parNom[nomB];
+    for (var id in parId) {
+      var bb = parId[id];
       for (var j = 0; j < (bb.niveaux || []).length; j++) {
         var nv = bb.niveaux[j];
         if (gardes[nv.id]) continue;
         var d = await sb.from('niveaux').delete().eq('id', nv.id);
-        if (d.error) avert.push(nomB + ' niveau ' + nv.num + ' : gardé (des fiches existent)');
+        if (d.error) avert.push(bb.nom + ' niveau ' + nv.num + ' : gardé (des fiches existent)');
       }
-      if (!structure.some(function (s) { return s.batiment === nomB; })) {
-        var db = await sb.from('batiments').delete().eq('id', bb.id);
-        if (db.error) avert.push(nomB + ' : gardé (des fiches existent)');
+      if (!batGardes[id]) {
+        var db = await sb.from('batiments').delete().eq('id', id);
+        if (db.error) avert.push(bb.nom + ' : gardé (des fiches existent)');
       }
     }
     if (affectes) {
       var actuels = verifier(await sb.from('affectations').select('profile_id').eq('chantier_id', ch.id)).map(function (a) { return a.profile_id; });
-      var aAjouter = affectes.filter(function (id) { return actuels.indexOf(id) < 0; });
-      var aRetirer = actuels.filter(function (id) { return affectes.indexOf(id) < 0; });
-      if (aAjouter.length) verifier(await sb.from('affectations').insert(aAjouter.map(function (id) { return { chantier_id: ch.id, profile_id: id }; })));
+      var aAjouter = affectes.filter(function (x) { return actuels.indexOf(x) < 0; });
+      var aRetirer = actuels.filter(function (x) { return affectes.indexOf(x) < 0; });
+      if (aAjouter.length) verifier(await sb.from('affectations').insert(aAjouter.map(function (x) { return { chantier_id: ch.id, profile_id: x }; })));
       if (aRetirer.length) verifier(await sb.from('affectations').delete().eq('chantier_id', ch.id).in('profile_id', aRetirer));
     }
     return { chantier: ch, avertissements: avert };
@@ -292,7 +404,7 @@
     return verifier(await sb.from('plans').select('*').eq('chantier_id', chantierId).order('created_at', { ascending: false }));
   }
   async function ajouterPlan(chantierId, fichier, titre, batimentId, niveauId) {
-    var ext = (fichier.name.split('.').pop() || 'pdf').toLowerCase();
+    var ext = ((fichier.name.split('.').pop() || 'pdf').toLowerCase().match(/^(pdf|png|jpe?g|webp)$/) || ['pdf'])[0];
     var chemin = chantierId + '/' + (root.crypto.randomUUID ? root.crypto.randomUUID() : Date.now()) + '.' + ext;
     var up = await sb.storage.from('plans').upload(chemin, fichier, { contentType: fichier.type || 'application/pdf' });
     if (up.error) throw traduire(up.error);
@@ -311,7 +423,7 @@
 
   root.Cloud = {
     actif: actif, client: sb, traduire: traduire, versCourriel: versCourriel,
-    session: session, connexion: connexion, deconnexion: deconnexion, profil: profil, registre: registre,
+    session: session, etatSession: etatSession, connexion: connexion, deconnexion: deconnexion, profil: profil, registre: registre,
     outbox: outbox, mettreEnFile: mettreEnFile, retirer: retirer, synchroniser: synchroniser, surChangement: surChangement,
     tableauBord: tableauBord, logements: logements, fiches: fiches, fiche: fiche, valider: valider,
     marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
@@ -320,6 +432,6 @@
     personnel: personnel, sauverPersonne: sauverPersonne,
     chantiersDetail: chantiersDetail, sauverChantier: sauverChantier,
     plans: plans, ajouterPlan: ajouterPlan, supprimerPlan: supprimerPlan, urlPlan: urlPlan,
-    photos: photos, enregistrerPhotos: enregistrerPhotos, photosServeur: photosServeur
+    photos: photos, enregistrerPhotos: enregistrerPhotos, supprimerPhotos: supprimerPhotos, photosServeur: photosServeur
   };
 })(typeof self !== 'undefined' ? self : this);

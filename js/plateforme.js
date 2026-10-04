@@ -16,7 +16,7 @@
   var etat = { profil: null, horsLigne: false, chantierId: null };
 
   var ONGLETS = [
-    { id: 'fiche', lib: '+ Nouvelle fiche', roles: ['admin', 'conducteur', 'chef_chantier', 'compagnon'], fn: function () { S.fiche = A.nouvelleFiche(); A.go(0); } },
+    { id: 'fiche', lib: '+ Nouvelle fiche', roles: ['admin', 'conducteur', 'chef_chantier', 'compagnon'], fn: function () { A.demarrerFiche(null, 0); } },
     { id: 'valider', lib: 'Fiches à valider', roles: ['admin', 'conducteur', 'chef_chantier'], fn: function () { fichesAValider(); } },
     { id: 'tdb', lib: 'Tableau de bord', roles: ['admin', 'conducteur'], fn: function () { tableauGeneral(); } },
     { id: 'chantiers', lib: 'Chantiers', roles: ['admin', 'conducteur'], fn: function () { chantiersView(); } },
@@ -70,9 +70,9 @@
       var b = document.getElementById('syncBadge');
       if (b) majBadge(b);
     });
-    var s = null;
-    try { s = await Cloud.session(); } catch (e) { /* hors ligne */ }
-    if (!s) { connexionView(); return; }
+    // hors ligne avec une session gardée sur l'appareil : on travaille avec le profil et le registre en mémoire
+    var st = await Cloud.etatSession();
+    if (st === 'absente') { connexionView(); return; }
     await charger();
   }
 
@@ -82,12 +82,19 @@
       etat.profil = await Cloud.profil();
       var reg = await Cloud.registre();
       S.config = reg.cfg;
-      etat.horsLigne = !reg.enLigne;
+      etat.horsLigne = !reg.enLigne || !!etat.profil.horsLigne;
       home();
       synchro(false);
     } catch (e) {
       A.toast(e.message || 'Erreur de connexion', 5000);
-      if (!e.reseau) { await Cloud.deconnexion(); connexionView(); }
+      if (e.session) {
+        // session refusée par le serveur (compte désactivé, session révoquée) : reconnexion, fiches en attente conservées
+        connexionView();
+      } else {
+        ecran('Hors ligne', 'Fiches chantier');
+        A.view.appendChild(h('div', { class: 'banner', text: 'Serveur injoignable et aucune donnée en mémoire sur cet appareil. Réessayez avec du réseau.' }));
+        A.view.appendChild(h('button', { class: 'btn btn--primary btn--block', text: 'Réessayer', onclick: charger }));
+      }
     }
   }
 
@@ -129,6 +136,7 @@
     var hist = A.load(A.KEYS.history, []);
     var change = false;
     lignes.forEach(function (row) {
+      if (S.fiche && S.fiche.id === row.id) S.fiche.serverVersion = row.version;
       hist.forEach(function (e) {
         if (e.fiche && e.fiche.id === row.id) {
           e.fiche.serverVersion = row.version; e.statut = row.resultat; e.serveur = row.etat; e.recu = row.received_at; change = true;
@@ -151,6 +159,9 @@
     errs.forEach(function (x) {
       el.appendChild(h('div', { class: 'sync__err' }, [
         h('span', { text: [x.fiche.batiment, x.fiche.niveau, (x.fiche.logements || []).join(' ')].join(' · ') + ' : ' + x.erreur }),
+        !x.recue ? h('button', { class: 'chip', text: 'Corriger', onclick: function () {
+          A.demarrerFiche(null, 0, x.fiche);
+        } }) : null,
         h('button', { class: 'chip', text: 'Retirer', onclick: async function () {
           if (confirm('Retirer cette fiche de la boîte d\'envoi ? (elle reste dans « Mes fiches » et peut partir par mail)')) {
             await Cloud.retirer(x.id); majBadge(el);
@@ -191,7 +202,11 @@
 
   async function deconnexion() {
     var o = await Cloud.outbox();
-    if (o.length && !confirm(o.length + ' fiche(s) pas encore envoyée(s). Elles resteront sur cet appareil. Se déconnecter quand même ?')) return;
+    if (o.length) {
+      if (!confirm(o.length + ' fiche(s) PAS ENCORE ENVOYÉE(S).\n\nSe déconnecter les SUPPRIME de cet appareil (pour qu\'un autre compte ne les envoie pas à votre place).\n\nConseil : annulez, attendez le réseau ou envoyez-les par mail.\n\nSupprimer et se déconnecter ?')) return;
+    } else if (!confirm('Se déconnecter ? Les fiches et brouillons de cet appareil seront effacés.')) {
+      return;
+    }
     await Cloud.deconnexion();
     etat.profil = null;
     connexionView();
@@ -242,7 +257,7 @@
     }
     A.view.appendChild(h('div', { class: 'stack' }, [
       h('button', { class: 'btn btn--primary btn--block', text: '+ Fiche suivante (même niveau)', onclick: function () {
-        S.fiche = A.nouvelleFiche(f); A.go(3);
+        A.demarrerFiche(f, 3);
       } }),
       !recue ? h('button', { class: 'btn btn--ghost btn--block', text: 'Envoyer par mail (secours)', onclick: function () {
         S.fiche = f; A.go(A.steps().length - 1);
@@ -568,6 +583,7 @@
     ecran(c ? 'Modifier le chantier' : 'Nouveau chantier', c ? c.nom : 'Registre', true, 'chantiers');
     A.view.appendChild(h('button', { class: 'btn btn--ghost', text: '← Chantiers', onclick: chantiersView }));
     var profils = [];
+    var cible = { id: c && c.id };          // garde l'identifiant créé si un 2e clic suit une erreur
     try { profils = await Cloud.profils(); } catch (e) { /* liste vide */ }
     var champ = function (lab, val, type) {
       var i = h('input', { class: 'input', type: type || 'text', value: val || '' });
@@ -584,7 +600,7 @@
     // structure
     var structure = [];
     (c && c.batiments || []).slice().sort(function (a, b) { return a.ordre - b.ordre; }).forEach(function (b) {
-      (b.niveaux || []).slice().sort(function (x, y) { return x.num - y.num; }).forEach(function (n) { structure.push({ batiment: b.nom, num: n.num, nb: n.nb_logements }); });
+      (b.niveaux || []).slice().sort(function (x, y) { return x.num - y.num; }).forEach(function (n) { structure.push({ bid: b.id, batiment: b.nom, num: n.num, nb: n.nb_logements }); });
     });
     var tbl = h('div', { class: 'struct' });
     function dessinerStructure() {
@@ -645,8 +661,9 @@
       var propre = structure.filter(function (s) { return s.batiment && !isNaN(s.num) && s.nb > 0; });
       btn.disabled = true; btn.textContent = 'Enregistrement…';
       try {
-        var res = await Cloud.sauverChantier({ id: c && c.id, nom: nom, adresse: fAdr.input.value, client: fCli.input.value,
-          debut: fDeb.input.value, fin: fFin.input.value, conducteur_id: selCond.value || null },
+        cible.nom = nom;
+        var res = await Cloud.sauverChantier(Object.assign(cible, { nom: nom, adresse: fAdr.input.value, client: fCli.input.value,
+          debut: fDeb.input.value, fin: fFin.input.value, conducteur_id: selCond.value || null }),
           propre, cases.map(function (l) { return l.querySelector('input'); }).filter(function (x) { return x.checked; }).map(function (x) { return x.dataset.id; }));
         await rafraichirRegistre();
         A.toast('Chantier enregistré.' + (res.avertissements.length ? ' ' + res.avertissements.join(' ; ') : ''), 5000);

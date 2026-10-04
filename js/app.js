@@ -9,7 +9,7 @@
   var FX = window.FicheXlsx;
   var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   var KEYS = { config: 'es_config', settings: 'es_settings', draft: 'es_draft', history: 'es_history' };
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
 
   var S = { contenu: null, modele: null, config: null, settings: null, fiche: null, step: 0, sentInfo: null };
   var $view = document.getElementById('view');
@@ -22,6 +22,14 @@
     try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; }
   }
   function save(key, value) {
+    if (key === KEYS.history && Array.isArray(value)) {
+      value = value.map(function (e, i) {
+        if (i < 5 || !e.fiche || !e.fiche.signature) return e;
+        var c = Object.assign({}, e, { fiche: Object.assign({}, e.fiche) });
+        delete c.fiche.signature;
+        return c;
+      });
+    }
     try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
   }
   function remove(key) { try { localStorage.removeItem(key); } catch (e) { /* ignoré */ } }
@@ -121,7 +129,25 @@
     }
     return f;
   }
-  function saveDraft() { if (S.fiche) save(KEYS.draft, { fiche: S.fiche, step: S.step }); }
+  function saveDraft() {
+    if (!S.fiche) return;
+    if (!save(KEYS.draft, { fiche: S.fiche, step: S.step }) && !saveDraft.alerte) {
+      saveDraft.alerte = true;
+      toast('Mémoire du téléphone pleine : la fiche en cours n’est plus sauvegardée. Envoyez-la ou libérez de la place.', 7000);
+    }
+  }
+  // démarre une fiche sans écraser en silence un brouillon en cours
+  function demarrerFiche(base, etape, ficheExistante) {
+    var d = load(KEYS.draft, null);
+    var cible = ficheExistante ? JSON.parse(JSON.stringify(ficheExistante)) : null;
+    if (d && d.fiche && d.fiche.chantier && (!cible || d.fiche.id !== cible.id)) {
+      var lib = [d.fiche.batiment, d.fiche.niveau, (d.fiche.logements || []).join(' ')].filter(Boolean).join(' · ');
+      if (!confirm('Une fiche en cours (' + (lib || d.fiche.chantier) + ') n’est pas envoyée.\nElle sera remplacée. Continuer ?')) return;
+      if (window.Cloud) Cloud.supprimerPhotos(d.fiche.id);
+    }
+    S.fiche = cible || nouvelleFiche(base);
+    go(etape || 0);
+  }
 
   // ------------------------------------------------------------ étapes
   var STEPS = [];
@@ -411,7 +437,7 @@
         URL.revokeObjectURL(img.src);
         c.toBlob(function (b) { b ? res(b) : rej(new Error('photo illisible')); }, 'image/jpeg', 0.72);
       };
-      img.onerror = function () { rej(new Error('photo illisible')); };
+      img.onerror = function () { URL.revokeObjectURL(img.src); rej(new Error('photo illisible')); };
       img.src = URL.createObjectURL(fichier);
     });
   }
@@ -438,10 +464,12 @@
       var liste = await Cloud.photos(f.id);
       f.nbPhotos = liste.length;
       saveDraft();
+      (grille._urls || []).forEach(function (u) { URL.revokeObjectURL(u); });
+      grille._urls = [];
       grille.innerHTML = '';
       liste.forEach(function (p) {
         grille.appendChild(h('div', { class: 'thumb' }, [
-          h('img', { src: URL.createObjectURL(p.blob), alt: 'Photo jointe' }),
+          h('img', { src: (function () { var u = URL.createObjectURL(p.blob); grille._urls.push(u); return u; })(), alt: 'Photo jointe' }),
           h('button', { class: 'chip', text: 'Retirer', onclick: async function () {
             await Cloud.enregistrerPhotos(f.id, (await Cloud.photos(f.id)).filter(function (x) { return x.id !== p.id; }));
             dessiner();
@@ -534,6 +562,8 @@
 
   function stepRecap() {
     var f = S.fiche, st = FX.stats(S.contenu, f);
+    S.blobPret = { cle: JSON.stringify(f), p: genererBlob(f) };
+    S.blobPret.p.catch(function () { S.blobPret = null; });
     $view.appendChild(h('span', { class: 'step-tag', text: 'Récapitulatif' }));
     $view.appendChild(h('h1', { text: 'Vérifier et envoyer' }));
     $view.appendChild(h('div', { class: 'stats' }, [
@@ -627,7 +657,7 @@
     btn.disabled = true;
     btn.textContent = 'Préparation…';
     try {
-      var blob = await genererBlob(f);
+      var blob = await (S.blobPret && S.blobPret.cle === JSON.stringify(f) ? S.blobPret.p : genererBlob(f));
       var name = FX.nomFichier(f), subject = FX.objetMail(f), body = FX.corpsMail(S.contenu, f);
       var mode;
       if (st.mode === 'relais' && st.relaisUrl) {
@@ -661,12 +691,14 @@
         }
       }
       var hist = load(KEYS.history, []);
+      hist = hist.filter(function (x) { return !x.fiche || x.fiche.id !== f.id; });
       hist.unshift({ id: f.id, envoye: new Date().toISOString(), mode: mode, statut: FX.stats(S.contenu, f).statut, fiche: f });
       if (!save(KEYS.history, hist.slice(0, 60))) save(KEYS.history, hist.slice(0, 15));
       remove(KEYS.draft);
       apresEnvoi(mode);
     } catch (e) {
       if (e && e.name === 'AbortError') toast('Envoi annulé.');
+      else if (e && e.name === 'NotAllowedError') toast('Le téléphone a bloqué le partage : appuyez encore une fois sur le bouton.', 6000);
       else erreur(e);
       btn.disabled = false;
       btn.textContent = 'Envoyer la fiche';
@@ -685,7 +717,7 @@
     $view.appendChild(h('p', { class: 'lead', text: FX.objetMail(f) }));
     $view.appendChild(h('div', { class: 'stack' }, [
       h('button', { class: 'btn btn--primary btn--block', text: '+ Fiche suivante (même niveau)', onclick: function () {
-        S.fiche = nouvelleFiche(f); go(3);
+        demarrerFiche(f, 3);
       } }),
       h('button', { class: 'btn btn--ghost btn--block', text: 'Accueil', onclick: home })
     ]));
@@ -706,7 +738,7 @@
     $view.appendChild(h('p', { class: 'lead', style: 'text-align:center', text: 'On contrôle – on photographie – on valide – puis on coule.' }));
     var stack = h('div', { class: 'stack' });
     stack.appendChild(h('button', { class: 'btn btn--primary btn--block', text: '+ Nouvelle fiche', onclick: function () {
-      S.fiche = nouvelleFiche(); go(0);
+      demarrerFiche(null, 0);
     } }));
     if (draft && draft.fiche) {
       stack.appendChild(h('button', { class: 'btn btn--gold btn--block',
@@ -740,8 +772,8 @@
         h('div', { class: 'muted', text: f.batiment + ' · ' + f.niveau + ' · Log. ' + f.logements.join(' ') + ' · ' +
           new Date(e.envoye).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) }),
         h('div', { class: 'hist__actions' }, [
-          h('button', { class: 'btn btn--ghost', text: 'Renvoyer', onclick: function () { S.fiche = JSON.parse(JSON.stringify(f)); go(STEPS.length - 1); } }),
-          h('button', { class: 'btn btn--ghost', text: 'Dupliquer', onclick: function () { S.fiche = nouvelleFiche(f); go(3); } })
+          h('button', { class: 'btn btn--ghost', text: 'Renvoyer', onclick: function () { demarrerFiche(null, STEPS.length - 1, f); } }),
+          h('button', { class: 'btn btn--ghost', text: 'Dupliquer', onclick: function () { demarrerFiche(f, 3); } })
         ])
       ]));
     });
@@ -858,6 +890,7 @@
   // ------------------------------------------------------------ démarrage
   async function start() {
     S.settings = Object.assign(defaultSettings(), load(KEYS.settings, {}));
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () { /* facultatif */ });
     try {
       var res = await Promise.all([fetch('modele/contenu.json'), fetch('modele/fiche_modele.xlsx')]);
       S.contenu = await res[0].json();
@@ -872,7 +905,7 @@
     }
     window.ESApp = {
       S: S, h: h, toast: toast, title: title, go: go, home: home, erreur: erreur, badge: badge,
-      nouvelleFiche: nouvelleFiche, genererBlob: genererBlob, telecharger: telecharger, saveDraft: saveDraft,
+      nouvelleFiche: nouvelleFiche, demarrerFiche: demarrerFiche, genererBlob: genererBlob, telecharger: telecharger, saveDraft: saveDraft,
       save: save, load: load, KEYS: KEYS, nav: $nav, view: $view, steps: function () { return STEPS; },
       settingsView: settingsView, historyView: historyView
     };
