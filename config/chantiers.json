@@ -1,0 +1,61 @@
+{
+ "format": "eurosanichauff-config",
+ "version": 1,
+ "chantiers": [
+  {
+   "nom": "EXEMPLE - Résidence Les Tilleuls",
+   "adresse": "Rue de l'Exemple, 59000 Lille",
+   "batiments": [
+    {
+     "nom": "Bât A",
+     "niveaux": [
+      {
+       "num": 0,
+       "logements": 3
+      },
+      {
+       "num": 1,
+       "logements": 4
+      },
+      {
+       "num": 2,
+       "logements": 4
+      },
+      {
+       "num": 3,
+       "logements": 4
+      }
+     ]
+    },
+    {
+     "nom": "Bât B",
+     "niveaux": [
+      {
+       "num": 0,
+       "logements": 2
+      },
+      {
+       "num": 1,
+       "logements": 3
+      },
+      {
+       "num": 2,
+       "logements": 3
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "chefs": [
+  "EXEMPLE Chef 1",
+  "EXEMPLE Chef 2"
+ ],
+ "chefs_equipe": [
+  "EXEMPLE Chef d'équipe 1"
+ ],
+ "compagnons": [
+  "EXEMPLE Compagnon 1",
+  "EXEMPLE Compagnon 2"
+ ]
+}

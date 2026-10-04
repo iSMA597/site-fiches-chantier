@@ -1,0 +1,448 @@
+{
+ "ref": "FC-INC-01",
+ "indice": "V1 - 10/2026",
+ "slogan": "ON CONTRÔLE  –  ON PHOTOGRAPHIE  –  ON VALIDE  –  PUIS ON COULE.",
+ "hint_logement": "Format : niveau sur 2 chiffres + n° du logement  —  RDC : 001, 002, 003…   R+1 : 011, 012…   R+2 : 021, 022…   R+3 : 031…",
+ "nb_logements_fiche": 6,
+ "sections": [
+  {
+   "n": 1,
+   "titre": "DOCUMENTS À AVOIR AVANT DE COMMENCER",
+   "alerte": "INTERDIT : incorporer à partir d'un ancien plan ou d'une cote non vérifiée.",
+   "note": null,
+   "validation": false,
+   "items": [
+    {
+     "id": "s1-1G",
+     "label": "Plan d'exécution à jour et dernier indice vérifié",
+     "libre": false
+    },
+    {
+     "id": "s1-1D",
+     "label": "Plan architecte / cloisons à jour",
+     "libre": false
+    },
+    {
+     "id": "s1-2G",
+     "label": "Plan de réservations / incorporations",
+     "libre": false
+    },
+    {
+     "id": "s1-2D",
+     "label": "Repérage des logements et gaines techniques",
+     "libre": false
+    },
+    {
+     "id": "s1-3G",
+     "label": "Modifications chantier connues et validées",
+     "libre": false
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "titre": "CAISSE / MATÉRIEL INCORPORATION",
+   "alerte": null,
+   "note": null,
+   "validation": false,
+   "items": [
+    {
+     "id": "s2-1G",
+     "label": "EPI obligatoires : gants – casque – lunettes – chaussures de sécurité",
+     "libre": false
+    },
+    {
+     "id": "s2-1D",
+     "label": "Tenailles",
+     "libre": false
+    },
+    {
+     "id": "s2-2G",
+     "label": "Mètre / décamètre",
+     "libre": false
+    },
+    {
+     "id": "s2-2D",
+     "label": "Marqueurs indélébiles",
+     "libre": false
+    },
+    {
+     "id": "s2-3G",
+     "label": "Bombe de traçage",
+     "libre": false
+    },
+    {
+     "id": "s2-3D",
+     "label": "Fixations adaptées",
+     "libre": false
+    },
+    {
+     "id": "s2-4G",
+     "label": "Gaines / fourreaux aux bons diamètres",
+     "libre": false
+    },
+    {
+     "id": "s2-4D",
+     "label": "",
+     "libre": true
+    },
+    {
+     "id": "s2-5G",
+     "label": "Résaboîtes / boîtes d'attente",
+     "libre": false
+    },
+    {
+     "id": "s2-5D",
+     "label": "",
+     "libre": true
+    },
+    {
+     "id": "s2-6G",
+     "label": "Bobine de ligature / colliers / fil d'attache",
+     "libre": false
+    },
+    {
+     "id": "s2-6D",
+     "label": "",
+     "libre": true
+    },
+    {
+     "id": "s2-7G",
+     "label": "Meuleuse / visseuse / perforateur / rallonge + batteries",
+     "libre": false
+    },
+    {
+     "id": "s2-7D",
+     "label": "",
+     "libre": true
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "titre": "CONTRÔLES AVANT ET PENDANT L'INCORPORATION",
+   "alerte": "EN CAS DE DOUTE SUR UNE COTE OU UNE IMPLANTATION : STOP. Appeler le chef de chantier.",
+   "note": null,
+   "validation": false,
+   "items": [
+    {
+     "id": "s3-1G",
+     "label": "Bon logement et bonne zone identifiés",
+     "libre": false
+    },
+    {
+     "id": "s3-1D",
+     "label": "Axes des cloisons repérés avant pose",
+     "libre": false
+    },
+    {
+     "id": "s3-2G",
+     "label": "Position des appareils sanitaires – radiateurs – nourrices vérifiée",
+     "libre": false
+    },
+    {
+     "id": "s3-2D",
+     "label": "EF / ECS / chauffage correctement repérés",
+     "libre": false
+    },
+    {
+     "id": "s3-3G",
+     "label": "Diamètres conformes aux plans",
+     "libre": false
+    },
+    {
+     "id": "s3-3D",
+     "label": "Sorties positionnées et cotées par rapport à des repères fixes",
+     "libre": false
+    },
+    {
+     "id": "s3-4G",
+     "label": "Gaines solidement fixées : aucun déplacement pendant le coulage",
+     "libre": false
+    },
+    {
+     "id": "s3-4D",
+     "label": "Aucune gaine pincée, écrasée ou fortement coudée",
+     "libre": false
+    },
+    {
+     "id": "s3-5G",
+     "label": "Toutes les extrémités bouchonnées contre le béton",
+     "libre": false
+    },
+    {
+     "id": "s3-5D",
+     "label": "Attentes protégées et identifiées",
+     "libre": false
+    },
+    {
+     "id": "s3-6G",
+     "label": "Croisements et épaisseurs compatibles avec la dalle",
+     "libre": false
+    },
+    {
+     "id": "s3-6D",
+     "label": "Zone nettoyée avant autocontrôle final",
+     "libre": false
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "titre": "PHOTOS ALOBEES OBLIGATOIRES AVANT COULAGE",
+   "alerte": null,
+   "note": "Photos nettes et classées dans le bon chantier / bâtiment / niveau / logement dans Alobees.",
+   "validation": false,
+   "items": [
+    {
+     "id": "s4-1G",
+     "label": "Vue générale de chaque logement / zone",
+     "libre": false
+    },
+    {
+     "id": "s4-1D",
+     "label": "Passages principaux des gaines",
+     "libre": false
+    },
+    {
+     "id": "s4-2G",
+     "label": "Sorties sanitaires et alimentations EF / ECS",
+     "libre": false
+    },
+    {
+     "id": "s4-2D",
+     "label": "Réseaux chauffage et nourrices / attentes",
+     "libre": false
+    },
+    {
+     "id": "s4-3G",
+     "label": "Traversées et réservations particulières",
+     "libre": false
+    },
+    {
+     "id": "s4-3D",
+     "label": "Photo avec repères fixes visibles pour retrouver le réseau après coulage",
+     "libre": false
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "titre": "VALIDATION AVANT AUTORISATION DE COULAGE",
+   "alerte": null,
+   "note": null,
+   "validation": true,
+   "items": [
+    {
+     "id": "s5-1G",
+     "label": "Incorporations contrôlées",
+     "libre": false
+    },
+    {
+     "id": "s5-1D",
+     "label": "Photos Alobees réalisées",
+     "libre": false
+    },
+    {
+     "id": "s5-2G",
+     "label": "Anomalies corrigées / signalées",
+     "libre": false
+    },
+    {
+     "id": "s5-2D",
+     "label": "Zone autorisée pour coulage",
+     "libre": false
+    }
+   ]
+  }
+ ],
+ "cellules": {
+  "fields": {
+   "chantier": "D7",
+   "date": "L7",
+   "batiment": "D9",
+   "coulage": "L9",
+   "niveau": "D11",
+   "chef": "L11",
+   "chef_equipe": "D13",
+   "compagnons": "L13",
+   "logements": [
+    "E15",
+    "G15",
+    "I15",
+    "K15",
+    "M15",
+    "O15"
+   ],
+   "observations": "D55",
+   "controleur": "D58"
+  },
+  "items": {
+   "s1-1G": {
+    "box": "A19",
+    "text": "B19"
+   },
+   "s1-1D": {
+    "box": "I19",
+    "text": "J19"
+   },
+   "s1-2G": {
+    "box": "A20",
+    "text": "B20"
+   },
+   "s1-2D": {
+    "box": "I20",
+    "text": "J20"
+   },
+   "s1-3G": {
+    "box": "A21",
+    "text": "B21"
+   },
+   "s2-1G": {
+    "box": "A26",
+    "text": "B26"
+   },
+   "s2-1D": {
+    "box": "I26",
+    "text": "J26"
+   },
+   "s2-2G": {
+    "box": "A27",
+    "text": "B27"
+   },
+   "s2-2D": {
+    "box": "I27",
+    "text": "J27"
+   },
+   "s2-3G": {
+    "box": "A28",
+    "text": "B28"
+   },
+   "s2-3D": {
+    "box": "I28",
+    "text": "J28"
+   },
+   "s2-4G": {
+    "box": "A29",
+    "text": "B29"
+   },
+   "s2-4D": {
+    "box": "I29",
+    "text": "J29"
+   },
+   "s2-5G": {
+    "box": "A30",
+    "text": "B30"
+   },
+   "s2-5D": {
+    "box": "I30",
+    "text": "J30"
+   },
+   "s2-6G": {
+    "box": "A31",
+    "text": "B31"
+   },
+   "s2-6D": {
+    "box": "I31",
+    "text": "J31"
+   },
+   "s2-7G": {
+    "box": "A32",
+    "text": "B32"
+   },
+   "s2-7D": {
+    "box": "I32",
+    "text": "J32"
+   },
+   "s3-1G": {
+    "box": "A35",
+    "text": "B35"
+   },
+   "s3-1D": {
+    "box": "I35",
+    "text": "J35"
+   },
+   "s3-2G": {
+    "box": "A36",
+    "text": "B36"
+   },
+   "s3-2D": {
+    "box": "I36",
+    "text": "J36"
+   },
+   "s3-3G": {
+    "box": "A37",
+    "text": "B37"
+   },
+   "s3-3D": {
+    "box": "I37",
+    "text": "J37"
+   },
+   "s3-4G": {
+    "box": "A38",
+    "text": "B38"
+   },
+   "s3-4D": {
+    "box": "I38",
+    "text": "J38"
+   },
+   "s3-5G": {
+    "box": "A39",
+    "text": "B39"
+   },
+   "s3-5D": {
+    "box": "I39",
+    "text": "J39"
+   },
+   "s3-6G": {
+    "box": "A40",
+    "text": "B40"
+   },
+   "s3-6D": {
+    "box": "I40",
+    "text": "J40"
+   },
+   "s4-1G": {
+    "box": "A45",
+    "text": "B45"
+   },
+   "s4-1D": {
+    "box": "I45",
+    "text": "J45"
+   },
+   "s4-2G": {
+    "box": "A46",
+    "text": "B46"
+   },
+   "s4-2D": {
+    "box": "I46",
+    "text": "J46"
+   },
+   "s4-3G": {
+    "box": "A47",
+    "text": "B47"
+   },
+   "s4-3D": {
+    "box": "I47",
+    "text": "J47"
+   },
+   "s5-1G": {
+    "box": "A52",
+    "text": "B52"
+   },
+   "s5-1D": {
+    "box": "I52",
+    "text": "J52"
+   },
+   "s5-2G": {
+    "box": "A53",
+    "text": "B53"
+   },
+   "s5-2D": {
+    "box": "I53",
+    "text": "J53"
+   }
+  },
+  "signature": "L58:P58"
+ }
+}
