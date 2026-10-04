@@ -41,8 +41,16 @@
     var r = await sb.auth.getSession();
     return r.data && r.data.session;
   }
-  async function connexion(email, mdp) {
-    var r = await sb.auth.signInWithPassword({ email: String(email).trim().toLowerCase(), password: mdp });
+  // identifiant simple (ex. « karim.b ») -> adresse technique ; une vraie adresse mail reste acceptée
+  var DOMAINE = 'fiches.euro-sanichauff.fr';
+  function versCourriel(identifiant) {
+    var s = String(identifiant).trim().toLowerCase();
+    if (s.indexOf('@') >= 0) return s;
+    s = s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '.');
+    return s + '@' + DOMAINE;
+  }
+  async function connexion(identifiant, mdp) {
+    var r = await sb.auth.signInWithPassword({ email: versCourriel(identifiant), password: mdp });
     if (r.error) throw traduire(r.error);
     return r.data.session;
   }
@@ -144,6 +152,10 @@
           res.erreurs++;
           await idb.set(K.outbox, courante);
         } else {
+          // photos (facultatives) : envoyées après la fiche ; la fiche reste en file tant qu'elles ne sont pas parties
+          var photosOK = await envoyerPhotos(e.fiche);
+          if (!photosOK) { break; }
+          courante = await outbox();
           await idb.set(K.outbox, courante.filter(function (x) { return x.id !== e.id; }));
           res.envoyees++;
           res.recues.push(r.data);
@@ -156,6 +168,35 @@
     }
     return res;
   }
+  // ------------------------------------------------------------ photos des fiches (IndexedDB -> Storage)
+  function clePhotos(ficheId) { return 'es_photos_' + ficheId; }
+  async function photos(ficheId) { return (await idb.get(clePhotos(ficheId))) || []; }
+  async function enregistrerPhotos(ficheId, liste) { await idb.set(clePhotos(ficheId), liste); }
+  async function envoyerPhotos(f) {
+    var liste = await photos(f.id);
+    for (var i = 0; i < liste.length; i++) {
+      var p = liste[i];
+      if (p.envoyee) continue;
+      var chemin = f.chantier_id + '/' + f.id + '/' + p.id + '.jpg';
+      var up = await sb.storage.from('photos').upload(chemin, p.blob, { contentType: 'image/jpeg', upsert: true });
+      if (up.error && !/exists|Duplicate/i.test(up.error.message)) return false;
+      var ins = await sb.from('fiche_photos').insert({ fiche_id: f.id, chantier_id: f.chantier_id, chemin: chemin, legende: p.legende || null });
+      if (ins.error && ins.error.code !== '23505') return false;
+      p.envoyee = true;
+      await enregistrerPhotos(f.id, liste);
+    }
+    return true;
+  }
+  async function photosServeur(ficheId) {
+    var rows = verifier(await sb.from('fiche_photos').select('chemin,legende').eq('fiche_id', ficheId).order('created_at'));
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var s = await sb.storage.from('photos').createSignedUrl(rows[i].chemin, 3600);
+      if (!s.error) out.push({ url: s.data.signedUrl, legende: rows[i].legende });
+    }
+    return out;
+  }
+
   function surChangement(fn) { ecouteurs.push(fn); }
   function notifier(info) { ecouteurs.forEach(function (fn) { try { fn(info); } catch (e) { /* ignoré */ } }); }
 
@@ -177,12 +218,108 @@
   async function modifierProfil(p) {
     return verifier(await sb.rpc('admin_modifier_profil', { pid: p.id, p_nom: p.nom, p_role: p.role, p_actif: p.actif }));
   }
+  async function suiviChantiers() { return verifier(await sb.from('v_suivi_chantiers').select('*').order('chantier')); }
+  async function fichesParEtat(etat) {
+    return verifier(await sb.from('v_fiches').select('*').eq('etat', etat).order('received_at', { ascending: false }).limit(300));
+  }
+
+  // ------------------------------------------------------------ comptes (administrateur)
+  async function comptes() { return verifier(await sb.from('v_comptes').select('*').order('nom')); }
+  async function creerCompte(c) {
+    return verifier(await sb.rpc('admin_creer_compte', { p_identifiant: c.identifiant, p_nom: c.nom, p_role: c.role, p_mot_de_passe: c.mdp }));
+  }
+  async function changerMotDePasse(id, mdp) { return verifier(await sb.rpc('admin_changer_mot_de_passe', { pid: id, p_mot_de_passe: mdp })); }
+
+  // ------------------------------------------------------------ registre des salariés
+  async function personnel() { return verifier(await sb.from('personnel').select('*').order('nom')); }
+  async function sauverPersonne(p) {
+    var row = { nom: p.nom, fonction: p.fonction, telephone: p.telephone || null, notes: p.notes || null, actif: p.actif !== false };
+    if (p.id) return verifier(await sb.from('personnel').update(row).eq('id', p.id).select().single());
+    return verifier(await sb.from('personnel').insert(row).select().single());
+  }
+
+  // ------------------------------------------------------------ chantiers (registre)
+  async function chantiersDetail() {
+    return verifier(await sb.from('chantiers')
+      .select('id,nom,adresse,client,debut,fin,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),affectations(profile_id)')
+      .order('nom'));
+  }
+  async function sauverChantier(c, structure, affectes) {
+    var row = { nom: c.nom, adresse: c.adresse || null, client: c.client || null, debut: c.debut || null, fin: c.fin || null,
+      conducteur_id: c.conducteur_id || null, actif: c.actif !== false };
+    var ch = c.id ? verifier(await sb.from('chantiers').update(row).eq('id', c.id).select().single())
+                  : verifier(await sb.from('chantiers').insert(row).select().single());
+    // structure : bâtiments (créés au besoin), niveaux (créés ou mis à jour), niveaux retirés supprimés si aucune fiche
+    var bats = verifier(await sb.from('batiments').select('id,nom,niveaux(id,num)').eq('chantier_id', ch.id));
+    var parNom = {}; bats.forEach(function (b) { parNom[b.nom] = b; });
+    var ordre = 0, gardes = {}, avert = [];
+    for (var i = 0; i < structure.length; i++) {
+      var s = structure[i];
+      if (!parNom[s.batiment]) {
+        parNom[s.batiment] = verifier(await sb.from('batiments').insert({ chantier_id: ch.id, nom: s.batiment, ordre: ++ordre }).select('id,nom').single());
+        parNom[s.batiment].niveaux = [];
+      }
+      var b = parNom[s.batiment];
+      var n = verifier(await sb.from('niveaux').upsert({ batiment_id: b.id, num: s.num, nb_logements: s.nb },
+        { onConflict: 'batiment_id,num' }).select('id').single());
+      gardes[n.id] = true;
+    }
+    for (var nomB in parNom) {
+      var bb = parNom[nomB];
+      for (var j = 0; j < (bb.niveaux || []).length; j++) {
+        var nv = bb.niveaux[j];
+        if (gardes[nv.id]) continue;
+        var d = await sb.from('niveaux').delete().eq('id', nv.id);
+        if (d.error) avert.push(nomB + ' niveau ' + nv.num + ' : gardé (des fiches existent)');
+      }
+      if (!structure.some(function (s) { return s.batiment === nomB; })) {
+        var db = await sb.from('batiments').delete().eq('id', bb.id);
+        if (db.error) avert.push(nomB + ' : gardé (des fiches existent)');
+      }
+    }
+    if (affectes) {
+      var actuels = verifier(await sb.from('affectations').select('profile_id').eq('chantier_id', ch.id)).map(function (a) { return a.profile_id; });
+      var aAjouter = affectes.filter(function (id) { return actuels.indexOf(id) < 0; });
+      var aRetirer = actuels.filter(function (id) { return affectes.indexOf(id) < 0; });
+      if (aAjouter.length) verifier(await sb.from('affectations').insert(aAjouter.map(function (id) { return { chantier_id: ch.id, profile_id: id }; })));
+      if (aRetirer.length) verifier(await sb.from('affectations').delete().eq('chantier_id', ch.id).in('profile_id', aRetirer));
+    }
+    return { chantier: ch, avertissements: avert };
+  }
+
+  // ------------------------------------------------------------ plans
+  async function plans(chantierId) {
+    return verifier(await sb.from('plans').select('*').eq('chantier_id', chantierId).order('created_at', { ascending: false }));
+  }
+  async function ajouterPlan(chantierId, fichier, titre, batimentId, niveauId) {
+    var ext = (fichier.name.split('.').pop() || 'pdf').toLowerCase();
+    var chemin = chantierId + '/' + (root.crypto.randomUUID ? root.crypto.randomUUID() : Date.now()) + '.' + ext;
+    var up = await sb.storage.from('plans').upload(chemin, fichier, { contentType: fichier.type || 'application/pdf' });
+    if (up.error) throw traduire(up.error);
+    return verifier(await sb.from('plans').insert({ chantier_id: chantierId, batiment_id: batimentId || null, niveau_id: niveauId || null,
+      titre: titre || fichier.name, chemin: chemin, type_mime: fichier.type || 'application/pdf', taille: fichier.size }).select().single());
+  }
+  async function supprimerPlan(p) {
+    verifier(await sb.from('plans').delete().eq('id', p.id));
+    await sb.storage.from('plans').remove([p.chemin]);
+  }
+  async function urlPlan(p) {
+    var s = await sb.storage.from('plans').createSignedUrl(p.chemin, 3600);
+    if (s.error) throw traduire(s.error);
+    return s.data.signedUrl;
+  }
 
   root.Cloud = {
-    actif: actif, client: sb, traduire: traduire,
+    actif: actif, client: sb, traduire: traduire, versCourriel: versCourriel,
     session: session, connexion: connexion, deconnexion: deconnexion, profil: profil, registre: registre,
     outbox: outbox, mettreEnFile: mettreEnFile, retirer: retirer, synchroniser: synchroniser, surChangement: surChangement,
     tableauBord: tableauBord, logements: logements, fiches: fiches, fiche: fiche, valider: valider,
-    marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil
+    marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
+    suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat,
+    comptes: comptes, creerCompte: creerCompte, changerMotDePasse: changerMotDePasse,
+    personnel: personnel, sauverPersonne: sauverPersonne,
+    chantiersDetail: chantiersDetail, sauverChantier: sauverChantier,
+    plans: plans, ajouterPlan: ajouterPlan, supprimerPlan: supprimerPlan, urlPlan: urlPlan,
+    photos: photos, enregistrerPhotos: enregistrerPhotos, photosServeur: photosServeur
   };
 })(typeof self !== 'undefined' ? self : this);

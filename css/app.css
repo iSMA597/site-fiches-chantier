@@ -189,3 +189,54 @@ h2 { font-size: 15px; color: var(--navy); margin: 22px 0 8px; text-transform: up
 .badge--etat { background: #EEF0F5; color: var(--navy); }
 .chip--ok { background: var(--ok); border-color: var(--ok); color: #fff; }
 @media (max-width: 640px) { .flist__row { grid-template-columns: 1fr; } }
+
+/* ---------------------------------------------------------------- module 1 : étapes, guide, photos, liste rouge, onglets */
+.stepper { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 12px; margin-bottom: 4px; scrollbar-width: thin; }
+.stepper__b { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 58px; padding: 6px 4px;
+  border-radius: 10px; border: 2px solid var(--line); background: #fff; cursor: pointer; font-size: 11px; color: var(--grey); }
+.stepper__b b { font-size: 15px; color: var(--navy); }
+.stepper__b--ok { border-color: #9ED1B2; background: var(--ok-bg); }
+.stepper__b--ok b { color: var(--ok); }
+.stepper__b--cur { border-color: var(--navy); background: var(--navy); color: #D6D4E8; }
+.stepper__b--cur b { color: #fff; }
+.btn--rond { min-height: 44px; width: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+.guide { border: 2px solid var(--cyan); background: #F2FAFC; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.guide ul { margin: 4px 0 10px; padding-left: 18px; }
+.guide__att li { color: var(--ko); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 8px 0; }
+.thumb { display: grid; gap: 4px; }
+.thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.rappels { border: 3px solid var(--ko); background: var(--ko-bg); border-radius: 14px; padding: 12px 14px; margin: 12px 0; }
+.rappels > strong { color: var(--ko); display: block; margin-bottom: 8px; }
+.rappels ul { margin: 0; padding-left: 18px; color: var(--ink); }
+.rappels__l { display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: start; padding: 8px 0; border-top: 1px solid #F3C9C4; font-weight: 700; color: var(--ink); cursor: pointer; }
+.rappels__l input { width: 24px; height: 24px; accent-color: var(--ok); margin: 0; }
+.rappels__aide { color: var(--ko); font-size: 13px; margin: 6px 0 0; font-weight: 700; }
+.onglets { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 2px solid var(--line); }
+.onglet { flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--line); background: #fff; font-weight: 700; color: var(--navy); cursor: pointer; }
+.onglet[aria-current="page"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.suivi { background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; display: grid; gap: 8px; }
+.suivi__tete { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.suivi__pct { font-size: 22px; color: var(--ok); }
+.suivi__infos { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+.suivi .chip { justify-self: start; }
+.urgent { color: var(--ko); font-weight: 700; }
+.barre { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: #E4E6EC; }
+.barre__s { height: 100%; }
+.champs2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 14px; }
+.struct { display: grid; gap: 6px; margin-top: 8px; }
+.struct__h, .struct__r { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.6fr 44px; gap: 6px; align-items: center; }
+.struct__h span { font-size: 12px; font-weight: 700; color: var(--grey); }
+.struct__r .input { min-height: 42px; }
+.flist__row--4 { grid-template-columns: 1.4fr 1fr 1fr auto; }
+.visio { background: #fff; border: 2px solid var(--navy); border-radius: 12px; padding: 10px; margin-top: 12px; }
+.visio__cadre { overflow: auto; max-height: 75vh; border-radius: 8px; background: #F5F6FA; touch-action: pan-x pan-y pinch-zoom; }
+.visio__img { width: 100%; display: block; }
+.visio__pdf { width: 100%; height: 75vh; border: 0; }
+label.chip { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 640px) {
+  .struct__h { display: none; }
+  .struct__r { grid-template-columns: 1fr 1fr 1fr 44px; }
+  .struct__r .muted { grid-column: 1 / -1; order: 5; }
+  .flist__row--4 { grid-template-columns: 1fr; }
+}

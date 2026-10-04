@@ -256,6 +256,70 @@
    ]
   }
  ],
+ "rappels": [
+  "J'ai travaillé avec le plan au dernier indice, et aucune cote n'a été prise sur un ancien plan.",
+  "Le bon logement et la bonne zone sont identifiés, les axes des cloisons sont repérés.",
+  "Les gaines sont fixées solidement : elles ne bougeront pas au coulage.",
+  "Toutes les extrémités sont bouchonnées, aucune gaine n'est pincée ni écrasée.",
+  "EF / ECS / chauffage sont repérés, les attentes sont protégées et identifiées.",
+  "Les photos sont faites dans Alobees, avec des repères fixes visibles, et classées au bon logement.",
+  "En cas de doute ou d'anomalie, le chef de chantier a été prévenu AVANT le coulage."
+ ],
+ "guide": {
+  "1": {
+   "faire": [
+    "Vérifier l'indice du plan d'exécution avec le chef avant de commencer.",
+    "Repérer les logements et les gaines techniques sur le plan avant de tracer."
+   ],
+   "attention": [
+    "Ne jamais incorporer à partir d'un ancien plan ou d'une cote non vérifiée.",
+    "Une modification de chantier non validée par écrit ne s'applique pas."
+   ]
+  },
+  "2": {
+   "faire": [
+    "Préparer la caisse la veille : gaines aux bons diamètres, bouchons, fixations, ligature.",
+    "Batteries chargées, rallonge et EPI vérifiés avant de monter sur la dalle."
+   ],
+   "attention": [
+    "EPI obligatoires sur toute la durée de l'intervention.",
+    "Matériel manquant : le noter dans les lignes libres, et ne pas improviser."
+   ]
+  },
+  "3": {
+   "faire": [
+    "Coter chaque sortie par rapport à des repères fixes (murs, poteaux, axes).",
+    "Fixer les gaines tous les 50 cm environ, et à chaque changement de direction.",
+    "Bouchonner chaque extrémité dès la pose."
+   ],
+   "attention": [
+    "Aucune gaine pincée, écrasée ou trop coudée (rayon de cintrage).",
+    "Vérifier que les croisements sont compatibles avec l'épaisseur de la dalle.",
+    "En cas de doute : STOP, on appelle le chef de chantier."
+   ]
+  },
+  "4": {
+   "faire": [
+    "Une vue générale par logement ou par zone, puis les détails : sorties, nourrices, traversées.",
+    "Toujours un repère fixe visible sur la photo pour retrouver le réseau après coulage.",
+    "Classer dans Alobees : chantier, bâtiment, niveau, logement."
+   ],
+   "attention": [
+    "Une photo floue ou sans repère ne sert à rien après le coulage.",
+    "Les photos sont faites AVANT le coulage, pas après."
+   ]
+  },
+  "5": {
+   "faire": [
+    "Relire la fiche, corriger ou signaler chaque anomalie.",
+    "Le contrôleur signe, puis on envoie la fiche au bureau."
+   ],
+   "attention": [
+    "Pas d'autorisation de coulage tant qu'une anomalie reste ouverte.",
+    "Une fiche validée par le chef ne peut plus être modifiée : on fait une fiche de remplacement."
+   ]
+  }
+ },
  "cellules": {
   "fields": {
    "chantier": "D7",

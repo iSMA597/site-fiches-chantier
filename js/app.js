@@ -9,7 +9,7 @@
   var FX = window.FicheXlsx;
   var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   var KEYS = { config: 'es_config', settings: 'es_settings', draft: 'es_draft', history: 'es_history' };
-  var VERSION = '1.1.0-dev';
+  var VERSION = '1.2.0';
 
   var S = { contenu: null, modele: null, config: null, settings: null, fiche: null, step: 0, sentInfo: null };
   var $view = document.getElementById('view');
@@ -157,8 +157,39 @@
     $next.textContent = S.step === STEPS.length - 2 ? 'Voir le récapitulatif' : 'Suivant';
     title(S.fiche.chantier || 'Nouvelle fiche',
       [S.fiche.batiment, S.fiche.niveau, S.fiche.logements.join(' ')].filter(Boolean).join(' · ') || 'Étape ' + (S.step + 1) + ' / ' + STEPS.length);
+    $view.appendChild(stepper());
     STEPS[S.step].render();
     window.scrollTo(0, 0);
+  }
+
+  // carrés d'étapes cliquables : on revient directement à une étape sans tout refaire
+  var LIBELLES = { chantier: 'Chantier', batiment: 'Bâtiment', niveau: 'Niveau', logements: 'Logements', infos: 'Équipe',
+    s1: 'Documents', s2: 'Matériel', s3: 'Contrôles', s4: 'Photos', s5: 'Validation', recap: 'Envoi' };
+  function etapeFaite(i) {
+    var st = STEPS[i];
+    if (st.id === 'recap') return false;
+    if (st.id.charAt(0) === 's' && st.id.length === 2) {
+      var sec = S.contenu.sections[+st.id.charAt(1) - 1];
+      return sec.items.every(function (it) {
+        return (it.libre && !S.fiche.libres[it.id]) || S.fiche.items[it.id] === 'OK' || S.fiche.items[it.id] === 'KO';
+      });
+    }
+    return st.valid() === true;
+  }
+  function sauterA(i) {
+    for (var j = 0; j < i; j++) {
+      var v = STEPS[j].valid();
+      if (v !== true) { toast(v); go(j); return; }
+    }
+    go(i);
+  }
+  function stepper() {
+    return h('nav', { class: 'stepper', 'aria-label': 'Étapes de la fiche' }, STEPS.map(function (st, i) {
+      var etat = i === S.step ? 'cur' : (etapeFaite(i) ? 'ok' : 'todo');
+      return h('button', { class: 'stepper__b stepper__b--' + etat, title: LIBELLES[st.id] || st.id,
+        'aria-current': i === S.step ? 'step' : null, onclick: function () { sauterA(i); } },
+        [h('b', { text: String(i + 1) }), h('span', { text: LIBELLES[st.id] || '' })]);
+    }));
   }
   $back.addEventListener('click', function () { if (S.step === 0) home(); else go(S.step - 1); });
   $next.addEventListener('click', function () {
@@ -255,6 +286,10 @@
     }
     draw();
     $view.appendChild(grid);
+    if (window.Plateforme && window.Plateforme.actif()) {
+      var bp = window.Plateforme.boutonPlansFiche();
+      if (bp) $view.appendChild(bp);
+    }
   }
 
   function chipsSelect(options, selected, multi, onChange) {
@@ -350,7 +385,75 @@
     draw();
     $view.appendChild(list);
     if (sec.note) $view.appendChild(h('div', { class: 'note', text: sec.note }));
+    if (sec.n === 4) $view.appendChild(blocPhotos());
+    var g = (S.contenu.guide || {})[String(sec.n)];
+    if (g) {
+      var boite = h('div', { class: 'guide', hidden: true }, [
+        h('strong', { text: 'Comment faire' }), h('ul', {}, g.faire.map(function (t) { return h('li', { text: t }); })),
+        h('strong', { text: 'Attention' }), h('ul', { class: 'guide__att' }, g.attention.map(function (t) { return h('li', { text: t }); }))
+      ]);
+      head.insertBefore(h('button', { class: 'btn btn--ghost btn--rond', 'aria-label': 'Guide de cette étape', text: '?',
+        onclick: function () { boite.hidden = !boite.hidden; } }), head.lastChild);
+      head.parentNode.insertBefore(boite, head.nextSibling);
+    }
     if (sec.validation) validationExtras();
+  }
+
+  // ------------------------------------------------------------ photos jointes (facultatives, ne bloquent pas)
+  function compresser(fichier) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 1600, w = img.naturalWidth, hh = img.naturalHeight, k = Math.min(1, max / Math.max(w, hh));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(hh * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        c.toBlob(function (b) { b ? res(b) : rej(new Error('photo illisible')); }, 'image/jpeg', 0.72);
+      };
+      img.onerror = function () { rej(new Error('photo illisible')); };
+      img.src = URL.createObjectURL(fichier);
+    });
+  }
+  function blocPhotos() {
+    var f = S.fiche;
+    var box = h('div', { class: 'card' }, [
+      h('strong', { text: 'Photos jointes à la fiche (facultatif)' }),
+      h('p', { class: 'muted', text: 'En plus des photos Alobees. Elles partent avec la fiche (10 maximum).' })
+    ]);
+    if (!window.Cloud) return box;
+    var grille = h('div', { class: 'thumbs' });
+    var input = h('input', { type: 'file', accept: 'image/*', capture: 'environment', multiple: true, hidden: true,
+      onchange: async function (e) {
+        var liste = await Cloud.photos(f.id);
+        var fichiers = Array.prototype.slice.call(e.target.files || []);
+        for (var i = 0; i < fichiers.length && liste.length < 10; i++) {
+          try { liste.push({ id: uuid(), blob: await compresser(fichiers[i]), envoyee: false }); } catch (err) { toast(err.message); }
+        }
+        await Cloud.enregistrerPhotos(f.id, liste);
+        e.target.value = '';
+        dessiner();
+      } });
+    async function dessiner() {
+      var liste = await Cloud.photos(f.id);
+      f.nbPhotos = liste.length;
+      saveDraft();
+      grille.innerHTML = '';
+      liste.forEach(function (p) {
+        grille.appendChild(h('div', { class: 'thumb' }, [
+          h('img', { src: URL.createObjectURL(p.blob), alt: 'Photo jointe' }),
+          h('button', { class: 'chip', text: 'Retirer', onclick: async function () {
+            await Cloud.enregistrerPhotos(f.id, (await Cloud.photos(f.id)).filter(function (x) { return x.id !== p.id; }));
+            dessiner();
+          } })
+        ]));
+      });
+    }
+    box.appendChild(grille);
+    box.appendChild(input);
+    box.appendChild(h('button', { class: 'btn btn--ghost btn--block', text: '📷  Prendre / ajouter une photo', onclick: function () { input.click(); } }));
+    dessiner();
+    return box;
   }
 
   function validationExtras() {
@@ -444,7 +547,8 @@
     [['Chantier', f.chantier], ['Bâtiment', f.batiment], ['Niveau', f.niveau], ['Logements', f.logements.join(', ')],
       ['Date', FX.frDate(f.date)], ['Coulage prévu', FX.frDate(f.coulage)], ['Chef chantier', f.chef || '—'],
       ['Chef d\'équipe', f.chef_equipe || '—'], ['Compagnons', f.compagnons.join(', ') || '—'],
-      ['Contrôleur', f.controleur || '—'], ['Signature', f.signature ? 'oui' : 'non']].forEach(function (kv) {
+      ['Contrôleur', f.controleur || '—'], ['Signature', f.signature ? 'oui' : 'non'],
+      ['Photos jointes', String(f.nbPhotos || 0)]].forEach(function (kv) {
       dl.appendChild(h('dt', { text: kv[0] }));
       dl.appendChild(h('dd', { text: kv[1] }));
     });
@@ -456,13 +560,36 @@
     var dest = S.settings.mode === 'relais' && S.settings.relaisUrl ? 'Envoi automatique au bureau'
       : (S.settings.email ? 'Destinataire : ' + S.settings.email : 'Destinataire à choisir dans Mail');
     $view.appendChild(h('p', { class: 'muted', text: dest + ' · Objet : ' + FX.objetMail(f) }));
+    // liste rouge : chaque point doit être lu et coché avant l'envoi
+    var rappels = (S.contenu.rappels || []).slice();
+    if (restants > 0) rappels.push(restants + ' point(s) non coché(s) : ils ne s\'appliquent pas ou seront faits avant le coulage.');
+    if (st.ko > 0) rappels.push(st.ko + ' anomalie(s) signalée(s) : le chef de chantier est prévenu.');
+    var boutonsEnvoi = [];
+    var coches = rappels.map(function (t) {
+      return h('input', { type: 'checkbox', onchange: majEnvoi });
+    });
+    var aide = h('p', { class: 'rappels__aide', text: 'Cochez tous les points pour pouvoir envoyer.' });
+    $view.appendChild(h('div', { class: 'rappels' }, [
+      h('strong', { text: '⚠ Avant d\'envoyer : lisez et cochez chaque point' }),
+      h('div', {}, rappels.map(function (t, i) { return h('label', { class: 'rappels__l' }, [coches[i], h('span', { text: t })]); })),
+      aide
+    ]));
+    function majEnvoi() {
+      var tous = coches.every(function (c) { return c.checked; });
+      boutonsEnvoi.forEach(function (b) { b.disabled = !tous; });
+      aide.hidden = tous;
+    }
     var btnSend = h('button', { class: 'btn btn--primary btn--block', text: 'Envoyer la fiche', onclick: function () { envoyer(btnSend); } });
+    boutonsEnvoi.push(btnSend);
     if (window.Plateforme && window.Plateforme.actif()) {
       // mode connecté : envoi au serveur d'abord, le mail devient le secours
       btnSend.textContent = 'Envoyer par mail (secours)';
       btnSend.className = 'btn btn--ghost btn--block';
-      $view.appendChild(window.Plateforme.boutonEnvoiServeur(f));
+      var zoneServeur = window.Plateforme.boutonEnvoiServeur(f);
+      boutonsEnvoi.push(zoneServeur.querySelector('button'));
+      $view.appendChild(zoneServeur);
     }
+    majEnvoi();
     $view.appendChild(h('div', { class: 'stack' }, [
       btnSend,
       h('button', { class: 'btn btn--ghost btn--block', text: 'Télécharger le fichier Excel', onclick: async function () {
@@ -514,9 +641,16 @@
         mode = 'relais';
       } else {
         var file = new File([blob], name, { type: XLSX_MIME });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        var fichiers = [file];
+        if (window.Cloud) {
+          (await Cloud.photos(f.id)).forEach(function (p, i) {
+            fichiers.push(new File([p.blob], name.replace(/\.xlsx$/, '') + '_photo' + (i + 1) + '.jpg', { type: 'image/jpeg' }));
+          });
+        }
+        if (navigator.canShare && !navigator.canShare({ files: fichiers })) fichiers = [file];
+        if (navigator.canShare && navigator.canShare({ files: fichiers })) {
           try { if (st.email && navigator.clipboard) await navigator.clipboard.writeText(st.email); } catch (e) { /* facultatif */ }
-          await navigator.share({ files: [file], title: subject,
+          await navigator.share({ files: fichiers, title: subject,
             text: (st.email ? 'À : ' + st.email + '\n' : '') + 'Objet : ' + subject + '\n\n' + body });
           mode = 'partage';
         } else {
