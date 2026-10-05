@@ -345,9 +345,9 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
   <aside class="side">
     <section class="panel">
       <h2>Réseau entre applis : en direct</h2>
-      <p class="hint-side">Passez en « Réseau : 2 téléphones », envoyez une fiche à gauche : elle arrive à droite.</p>
+      <p class="hint-side">Passez en « Réseau : 2 téléphones », le chef de chantier envoie une fiche à gauche : elle arrive chez le conducteur à droite. Mettez un téléphone en « Compagnon » pour voir l'équipe la recevoir.</p>
       <div class="flow" aria-hidden="true">
-        <div class="flow__n" id="fn-c"><b>📱</b>Compagnon</div><div class="flow__a" id="fa-cs">➜</div>
+        <div class="flow__n" id="fn-c"><b>📱</b>Chef · équipe</div><div class="flow__a" id="fa-cs">➜</div>
         <div class="flow__n" id="fn-s"><b>☁</b>Serveur</div><div class="flow__a" id="fa-sp">➜</div>
         <div class="flow__n" id="fn-p"><b>💻</b>Conducteur · Patron</div>
         <div class="flow__mail"><div class="flow__n" id="fn-f" style="width:60%"><b>✉</b>Facturation (Excel en pièce jointe)</div></div>
@@ -411,7 +411,7 @@ const STEPS = ['Chantier', 'Emplacement', 'Équipe', 'Documents', 'Matériel', '
 const MAIL_FACTU = 'facture.eurosanichauff@gmail.com';
 
 const PROFILS = {
-  compagnon:   { nom: 'Karim B.',   role: 'Compagnon',              tabs: ['inc'],               nouvelle: true,  recues: null },
+  compagnon:   { nom: 'Karim B.',   role: 'Compagnon',              tabs: ['inc'],               nouvelle: false, recues: null },
   chef:        { nom: 'Julien M.',  role: 'Chef de chantier',       tabs: ['inc'],               nouvelle: true,  recues: 'chef' },
   conducteur:  { nom: 'Sophie D.',  role: 'Conducteur de travaux',  tabs: ['inc', 'tdb', 'reg'], nouvelle: true,  recues: 'conducteur', valide: true, registre: 'siens' },
   patron:      { nom: 'Direction',  role: 'Patron (admin)',         tabs: ['inc', 'tdb', 'reg'], nouvelle: true,  recues: 'tous', valide: 'absence', registre: 'admin' },
@@ -443,19 +443,19 @@ function seed() {
   };
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
     id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, 
-    date: '02/10/2026', coulage: '07/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: [auteur],
+    date: '02/10/2026', coulage: '07/10/2026', chef: auteur, chefEq: 'Thomas L.', comps: auteur === 'Julien M.' ? ['Karim B.', 'Mehdi R.'] : ['Mehdi R.', 'Lucas P.'],
     rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false, sign: SIGN_DEMO, signeLe: null,
     vu: {}, histo: [['Envoyée', '02/10 16:40']], valideur: null, motif: null,
   }, extra || {}));
   SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
-  mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
-  mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
-  mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
-  mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', coulage: '03/10/2026' });
-  mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
-  mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Karim B.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
-  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Mehdi R.', [], { histo: [['Envoyée', '05/10 09:58']] });
-  mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Karim B.', [], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, motif: 'Photo manquante : ajouter les photos des nourrices', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
+  mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Julien M.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
+  mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
+  mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
+  mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', coulage: '03/10/2026' });
+  mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Julien M.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
+  mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Julien M.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
+  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', [], { histo: [['Envoyée', '05/10 09:58']] });
+  mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Julien M.', [], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, motif: 'Photo manquante : ajouter les photos des nourrices', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
   DRAFTS = {};
 }
 
@@ -720,8 +720,8 @@ function viewIncHome(p) {
   const seg = pr.recues ? (pr.nouvelle ? p.seg : 'recues') : 'mes';
   if (seg === 'mes') {
     const fs = mesFiches(p.profil);
-    out += pr.recues ? '' : '<h3>Mes fiches</h3>';
-    out += fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, f.auteur !== pr.nom)).join('')}</div>` : '<p class="empty">Aucune fiche envoyée pour l\'instant.</p>';
+    out += pr.recues ? '' : (pr.nouvelle ? '<h3>Mes fiches</h3>' : '<h3>Fiches de mon équipe</h3><p class="lead">Vous recevez les fiches où le chef vous a mis dans l\'équipe, avec le plan du niveau. Seul le chef de chantier crée les fiches.</p>');
+    out += fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, f.auteur !== pr.nom)).join('')}</div>` : `<p class="empty">${pr.nouvelle ? 'Aucune fiche envoyée pour l\'instant.' : 'Aucune fiche reçue pour l\'instant.'}</p>`;
   } else {
     const fs = recuesPour(p.profil);
     if (pr.recues === 'validees') out += `<h3>Fiches validées${b ? `<span class="badge badge--in">${b}</span>` : ''}</h3><p class="lead">Seules les fiches validées par le conducteur arrivent ici.</p>`;
@@ -1262,7 +1262,7 @@ function buildStage() {
 }
 function reset() {
   seed();
-  PHONES = [newPhone('compagnon'), newPhone('conducteur')];
+  PHONES = [newPhone('chef'), newPhone('conducteur')];
   PHONES.forEach((p, i) => (p.id = i));
   buildStage(); renderJournal();
 }
