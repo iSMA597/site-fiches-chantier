@@ -1,5 +1,5 @@
 /* Service worker : fonctionnement hors ligne (cache de l'application). Changer VERSION à chaque mise à jour. */
-var VERSION = 'fiches-v1.3.0';
+var VERSION = 'fiches-v1.3.1';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'js/app.js', 'js/fiche-xlsx.js',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js', 'js/config.js', 'js/cloud.js', 'js/plateforme.js',

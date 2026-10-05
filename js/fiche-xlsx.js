@@ -122,13 +122,27 @@
     setVal(ws, F.observations, fiche.observations || null);
     setVal(ws, F.controleur, fiche.controleur || null);
 
+    // ExcelJS partage un même objet style entre les cellules du modèle : on donne à chaque cellule
+    // modifiée SA propre copie, sinon une couleur appliquée à une case se répercute sur toutes les autres.
+    function restyle(cell, patch) {
+      var st = JSON.parse(JSON.stringify(cell.style || {}));
+      Object.keys(patch).forEach(function (k) { st[k] = Object.assign({}, st[k] || {}, patch[k]); });
+      cell.style = st;
+    }
+    var FOND_KO = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDECEA' } };
     Object.keys(C.items).forEach(function (id) {
       var v = (fiche.items || {})[id] || '';
       var cell = ws.getCell(C.items[id].box);
       cell.value = BOX[v];
-      cell.font = Object.assign({}, cell.font, { color: { argb: COLORS[v] }, bold: v !== '' });
+      restyle(cell, { font: { color: { argb: COLORS[v] }, bold: v !== '' } });
       var libre = fiche.libres && fiche.libres[id];
       if (libre) setVal(ws, C.items[id].text, libre);
+      if (v === 'KO') {
+        // anomalie : case et libellé en rouge sur fond rosé, visibles au premier coup d'œil
+        restyle(cell, { fill: FOND_KO });
+        var texte = ws.getCell(C.items[id].text);
+        restyle(texte, { font: { color: { argb: COLORS.KO }, bold: true }, fill: FOND_KO });
+      }
     });
 
     if (fiche.signature && /^data:image\/png;base64,/.test(fiche.signature)) {

@@ -9,7 +9,7 @@
   var FX = window.FicheXlsx;
   var XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   var KEYS = { config: 'es_config', settings: 'es_settings', draft: 'es_draft', history: 'es_history' };
-  var VERSION = '1.3.0';
+  var VERSION = '1.3.1';
 
   var S = { contenu: null, modele: null, config: null, settings: null, fiche: null, step: 0, sentInfo: null };
   var $view = document.getElementById('view');
