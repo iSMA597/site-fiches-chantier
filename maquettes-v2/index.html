@@ -1,0 +1,1244 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquettes V2 Fiches chantier</title>
+<meta name="description" content="Lot A : maquettes cliquables de l'application Fiches chantier V2 (Euro Sanichauff). Données fictives, rien n'est enregistré.">
+<style>
+/* Charte Euro Sanichauff (LOGO_CARTE_VISITE.pdf p.2) + couleurs fonctionnelles de l'appli v1 */
+:root {
+  --navy: #27214E; --royal: #134395; --cyan: #5CC1D2; --gold: #F9B214;
+  --ink: #1F1D33; --grey: #5F5E75; --line: #DCDEE6; --bg: #F5F6FA; --card: #FFFFFF;
+  --ok: #1E7B45; --ok-bg: #E8F5EC; --ko: #B42318; --ko-bg: #FDECEA;
+  --blue: #1D5FD1; --blue-bg: #E7EFFC; --yel: #8A5A00; --yel-bg: #FFF4D6; --off: #8B8A9C; --off-bg: #ECEDF2;
+  --radius: 14px;
+  --font: "Century Gothic", "Futura", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { font-family: var(--font); color: var(--ink); background: #E9EAF1; font-size: 15px; line-height: 1.4; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+/* ---------- page de présentation (hors téléphone) ---------- */
+.deck-head { background: var(--navy); color: #fff; padding: 14px 16px; }
+.deck-head__in { max-width: 1480px; margin: 0 auto; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.deck-head img { height: 40px; background: #fff; border-radius: 8px; padding: 3px 6px; }
+.deck-head h1 { font-size: 18px; margin: 0; }
+.deck-head p { margin: 0; font-size: 13px; opacity: .85; }
+.mock-flag { margin-left: auto; background: var(--gold); color: var(--navy); font-weight: 700; font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+.deck { max-width: 1480px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .deck { grid-template-columns: minmax(0, 1fr); } }
+.controls { background: #fff; border-radius: var(--radius); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: flex-end; margin-bottom: 16px; }
+.ctl { display: flex; flex-direction: column; gap: 4px; }
+.ctl > span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--grey); }
+.seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+.seg button { border: 0; background: none; padding: 7px 11px; border-radius: 8px; font-weight: 700; font-size: 13px; color: var(--grey); }
+.seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.ctl select { border: 2px solid var(--line); border-radius: 10px; padding: 6px 8px; font-weight: 700; background: #fff; }
+.reset { border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 6px 12px; font-weight: 700; }
+.stage { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+.stage__col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.stage__lbl { font-size: 12px; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: .04em; display: flex; gap: 8px; align-items: center; }
+.stage__lbl select { border: 2px solid var(--line); border-radius: 8px; padding: 3px 6px; font-weight: 700; background: #fff; font-size: 13px; text-transform: none; letter-spacing: 0; }
+.side { display: flex; flex-direction: column; gap: 16px; }
+.panel { background: #fff; border-radius: var(--radius); padding: 14px; }
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--navy); margin: 0 0 10px; }
+.flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 4px; margin-bottom: 8px; }
+.flow__n { border: 2px solid var(--line); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 11px; font-weight: 700; color: var(--grey); transition: all .25s; }
+.flow__n b { display: block; font-size: 18px; }
+.flow__n.on { border-color: var(--cyan); background: #E6F7FA; color: var(--navy); }
+.flow__a { color: var(--line); font-weight: 700; transition: color .25s; }
+.flow__a.on { color: var(--cyan); }
+.flow__mail { grid-column: 1 / -1; display: flex; justify-content: center; }
+.journal { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; display: flex; flex-direction: column-reverse; gap: 6px; }
+.journal li { font-size: 12.5px; border-left: 3px solid var(--line); padding: 4px 8px; background: var(--bg); border-radius: 0 8px 8px 0; }
+.journal li b { color: var(--navy); }
+.journal li time { color: var(--grey); font-size: 11px; margin-right: 6px; }
+.journal li.t-notif { border-left-color: var(--gold); }
+.journal li.t-ok { border-left-color: var(--ok); }
+.journal li.t-ko { border-left-color: var(--ko); }
+.journal li.t-mail { border-left-color: var(--royal); }
+.journal__empty { color: var(--grey); font-size: 13px; }
+.todo { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 7px; }
+.todo b { color: var(--navy); }
+.hint-side { font-size: 12.5px; color: var(--grey); margin: 0 0 8px; }
+
+/* ---------- cadre téléphone / PC ---------- */
+.phone { width: 390px; height: 820px; border: 10px solid #15132B; border-radius: 46px; background: #fff; position: relative; overflow: hidden; box-shadow: 0 18px 50px rgba(21, 19, 43, .28); container-type: inline-size; container-name: app; }
+.phone.pc { width: min(1060px, calc(100vw - 32px)); height: 760px; border-radius: 14px; border-width: 8px; }
+@media (max-width: 460px) {
+  .phone { width: calc(100vw - 16px); height: 86vh; min-height: 640px; border-width: 6px; border-radius: 26px; }
+  .deck { padding: 8px; }
+}
+.app { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
+.sbar { height: 30px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 12px; font-weight: 700; background: #fff; }
+.phone.pc .sbar { padding: 0 12px; }
+.net { border: 0; border-radius: 99px; padding: 2px 9px; font-size: 11px; font-weight: 700; background: var(--ok-bg); color: var(--ok); }
+.net.off { background: var(--ko-bg); color: var(--ko); }
+.top { flex: none; display: flex; align-items: center; gap: 10px; padding: 6px 12px 8px; background: #fff; border-bottom: 3px solid var(--navy); }
+.top__logo { width: 50px; height: 36px; object-fit: contain; flex: none; }
+.top__back { width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--bg); font-size: 20px; font-weight: 700; color: var(--navy); flex: none; }
+.top__t { min-width: 0; flex: 1; }
+.top__t strong { display: block; color: var(--navy); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top__t span { display: block; color: var(--grey); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--navy); color: #fff; font-weight: 700; font-size: 13px; flex: none; }
+.main { flex: 1; overflow: auto; padding: 14px 14px 24px; }
+.main__in { max-width: 760px; margin: 0 auto; }
+.foot { flex: none; background: #fff; border-top: 1px solid var(--line); padding: 10px 12px 12px; }
+.foot__row { display: flex; gap: 10px; max-width: 760px; margin: 0 auto; }
+.foot__row .btn { flex: 1; }
+.foot__hint { font-size: 12.5px; color: var(--ko); text-align: center; margin: 0 auto 8px; max-width: 760px; font-weight: 700; }
+.tabs { flex: none; display: flex; background: #fff; border-top: 1px solid var(--line); padding: 4px 4px 10px; }
+.tabs button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 11.5px; font-weight: 700; color: var(--grey); position: relative; border-radius: 10px; }
+.tabs button svg { width: 24px; height: 24px; }
+.tabs button[aria-current="page"] { color: var(--navy); background: #E6F7FA; }
+.badge { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 19px; height: 19px; border-radius: 99px; background: var(--ko); color: #fff; font-size: 11px; display: grid; place-items: center; padding: 0 5px; }
+.badge--in { position: static; display: inline-grid; margin-left: 6px; }
+
+/* ---------- éléments communs ---------- */
+h3 { font-size: 13px; color: var(--navy); margin: 18px 0 8px; text-transform: uppercase; letter-spacing: .03em; }
+h3:first-child { margin-top: 2px; }
+.lead { color: var(--grey); margin: 0 0 12px; font-size: 13.5px; }
+.btn { min-height: 50px; border-radius: var(--radius); border: 2px solid transparent; padding: 0 16px; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn[disabled] { opacity: .38; cursor: not-allowed; }
+.btn--primary { background: var(--navy); color: #fff; }
+.btn--gold { background: var(--gold); color: var(--navy); }
+.btn--ok { background: var(--ok); color: #fff; }
+.btn--ko { background: #fff; border-color: var(--ko); color: var(--ko); }
+.btn--ghost { background: #fff; border-color: var(--line); color: var(--navy); }
+.btn--big { width: 100%; min-height: 64px; font-size: 17px; }
+.btn--sm { min-height: 38px; font-size: 13px; padding: 0 12px; border-radius: 10px; }
+.btn--block { width: 100%; }
+.card { background: var(--card); border-radius: var(--radius); padding: 12px; border: 1px solid var(--line); }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row-btn { width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; gap: 10px; align-items: center; }
+.row-btn:hover { border-color: var(--cyan); }
+.row-btn__main { flex: 1; min-width: 0; }
+.row-btn__main strong { display: block; color: var(--navy); }
+.row-btn__main span { display: block; font-size: 12.5px; color: var(--grey); }
+.chev { color: var(--grey); font-size: 20px; }
+.dot-new { width: 10px; height: 10px; border-radius: 50%; background: var(--ko); flex: none; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+.p-attente { background: var(--off-bg); color: var(--ink); }
+.p-envoyee { background: var(--blue-bg); color: var(--blue); }
+.p-recue { background: var(--blue-bg); color: var(--blue); }
+.p-validee { background: var(--ok-bg); color: var(--ok); }
+.p-corriger { background: var(--yel-bg); color: var(--yel); }
+.p-brouillon { background: var(--yel-bg); color: var(--yel); }
+.p-ko { background: var(--ko-bg); color: var(--ko); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 46px; min-width: 64px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--line); background: #fff; font-weight: 700; color: var(--navy); }
+.chip[aria-pressed="true"] { background: var(--navy); border-color: var(--navy); color: #fff; }
+.chip[disabled] { opacity: .35; cursor: not-allowed; }
+.field { margin-bottom: 14px; }
+.field__l { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; color: var(--navy); margin-bottom: 6px; font-size: 14px; }
+.field__l small { font-weight: 400; color: var(--grey); font-size: 12px; }
+.seg-in { display: flex; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; margin-bottom: 12px; }
+.seg-in button { flex: 1; border: 0; background: none; padding: 9px 6px; border-radius: 9px; font-weight: 700; color: var(--grey); font-size: 13.5px; }
+.seg-in button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.alert { background: var(--ko-bg); color: var(--ko); border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 13.5px; margin-bottom: 12px; }
+.info { background: #E9EFFA; color: var(--royal); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 12px; }
+.muted { color: var(--grey); font-size: 13px; }
+textarea, .inp { width: 100%; border: 2px solid var(--line); border-radius: 12px; padding: 10px; background: #fff; resize: vertical; }
+.link { border: 0; background: none; color: var(--royal); font-weight: 700; padding: 6px 0; text-decoration: underline; text-underline-offset: 3px; }
+.empty { text-align: center; color: var(--grey); padding: 18px 8px; font-size: 13.5px; }
+
+/* étapes 1-8 */
+.steps { flex: none; display: flex; gap: 5px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--line); justify-content: center; }
+.steps button { width: 36px; height: 36px; border-radius: 9px; border: 2px solid var(--line); background: #fff; font-weight: 700; color: var(--grey); font-size: 14px; flex: none; }
+.steps button.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.steps button[aria-current="step"] { border-color: var(--navy); box-shadow: 0 0 0 2px var(--navy); color: var(--navy); }
+.steps button.done[aria-current="step"] { color: #fff; }
+.steps button[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* points Documents / Matériel / Contrôles */
+.pt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.counter { font-weight: 700; color: var(--navy); font-size: 15px; flex: 1; }
+.counter small { display: block; font-weight: 400; font-size: 12px; color: var(--grey); }
+.qbtn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--royal); background: #fff; color: var(--royal); font-weight: 700; font-size: 17px; flex: none; }
+.pt { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+.pt.is-ok { border-color: #9FD3B2; }
+.pt.is-ko { border-color: var(--ko); background: #FFF8F7; }
+.pt__l { font-size: 14px; margin-bottom: 8px; }
+.pt__b { display: flex; gap: 8px; }
+.pt__b button { flex: 1; min-height: 44px; border-radius: 10px; border: 2px solid var(--line); background: #fff; font-weight: 700; }
+.pt__b .b-ok[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #fff; }
+.pt__b .b-ko[aria-pressed="true"] { background: var(--ko); border-color: var(--ko); color: #fff; }
+.pt textarea { margin-top: 8px; font-size: 13.5px; }
+
+/* photos */
+.ph-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@container app (min-width: 700px) { .ph-grid { grid-template-columns: repeat(5, 1fr); } }
+.ph { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--off-bg); display: grid; place-items: center; color: var(--grey); font-size: 11px; }
+.ph img { width: 100%; height: 100%; object-fit: cover; }
+.ph__kb { position: absolute; left: 4px; bottom: 4px; background: rgba(21, 19, 43, .75); color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 6px; }
+.ph__x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(21, 19, 43, .75); color: #fff; font-weight: 700; }
+.ph-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.ph-btns label { cursor: pointer; }
+.ph-btns input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* envoi */
+.recap { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 12px; }
+.recap__big { font-size: 18px; font-weight: 700; color: var(--navy); }
+.recap__ko { color: var(--ko); }
+.redbox { border: 3px solid var(--ko); border-radius: var(--radius); background: #fff; padding: 12px; margin-bottom: 12px; }
+.redbox h4 { margin: 0 0 8px; color: var(--ko); font-size: 15px; }
+.redbox ul { margin: 0 0 12px; padding-left: 18px; font-size: 13.5px; display: flex; flex-direction: column; gap: 5px; }
+.check { display: flex; gap: 10px; align-items: center; font-weight: 700; min-height: 48px; cursor: pointer; }
+.check input { width: 26px; height: 26px; accent-color: var(--navy); flex: none; }
+.redbox .check { background: var(--ko-bg); border-radius: 10px; padding: 8px 10px; color: var(--ko); }
+.redbox .check input { accent-color: var(--ko); }
+.send-zone { display: flex; flex-direction: column; gap: 10px; }
+.check--small { font-weight: 400; font-size: 13.5px; }
+.check--small small { display: block; color: var(--grey); font-size: 12px; }
+
+/* fiche / suivi */
+.track { display: flex; gap: 0; margin: 6px 0 14px; }
+.track__s { flex: 1; text-align: center; font-size: 11px; color: var(--grey); position: relative; padding-top: 26px; }
+.track__s::before { content: ""; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; border-radius: 50%; background: var(--off-bg); border: 2px solid var(--line); z-index: 1; }
+.track__s::after { content: ""; position: absolute; top: 12px; left: -50%; width: 100%; height: 3px; background: var(--line); }
+.track__s:first-child::after { display: none; }
+.track__s.on { color: var(--navy); font-weight: 700; }
+.track__s.on::before { background: var(--ok); border-color: var(--ok); }
+.track__s.on::after { background: var(--ok); }
+.track__s.warn::before { background: var(--gold); border-color: var(--gold); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px; }
+.kv dt { color: var(--grey); }
+.kv dd { margin: 0; font-weight: 700; color: var(--navy); }
+details.sec { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+details.sec summary { padding: 11px 12px; font-weight: 700; color: var(--navy); cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 13px; display: flex; flex-direction: column; gap: 5px; }
+.r-ok { color: var(--ok); font-weight: 700; margin-right: 6px; }
+.r-ko { color: var(--ko); font-weight: 700; margin-right: 6px; }
+.actions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.lock { background: var(--ok-bg); color: var(--ok); border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 13.5px; }
+
+/* tableau de bord */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+@container app (min-width: 700px) { .kpis { grid-template-columns: repeat(4, 1fr); } .tdb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } }
+.kpi { background: #fff; border-radius: 12px; padding: 10px 12px; border: 1px solid var(--line); }
+.kpi b { display: block; font-size: 22px; color: var(--navy); }
+.kpi span { font-size: 12px; color: var(--grey); }
+.kpi.warn b { color: var(--ko); }
+.ch-card { width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; display: block; }
+.ch-card:hover { border-color: var(--cyan); }
+.ch-card__t { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; color: var(--navy); }
+.bar { height: 10px; background: var(--off-bg); border-radius: 99px; overflow: hidden; margin: 8px 0; display: flex; }
+.bar i { display: block; height: 100%; }
+.ch-card__m { font-size: 12.5px; color: var(--grey); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; margin-bottom: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.bat { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; margin-bottom: 12px; }
+.bat h4 { margin: 0 0 8px; color: var(--navy); }
+.lvl { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lvl__n { width: 40px; font-size: 12px; font-weight: 700; color: var(--grey); flex: none; }
+.lvl__c { display: flex; flex-wrap: wrap; gap: 5px; }
+.cell { width: 52px; height: 40px; border-radius: 8px; border: 0; font-weight: 700; font-size: 12.5px; position: relative; }
+.cell i { position: absolute; top: 1px; right: 4px; font-style: normal; font-size: 10px; }
+.c-vert { background: var(--ok); color: #fff; }
+.c-bleu { background: var(--blue); color: #fff; }
+.c-rouge { background: var(--ko); color: #fff; }
+.c-jaune { background: var(--gold); color: var(--navy); }
+.c-gris { background: var(--off-bg); color: var(--grey); }
+
+/* registre */
+.struct-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--bg); font-size: 14px; }
+.struct-row:last-child { border-bottom: 0; }
+.struct-row > span { flex: 1; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper button { width: 34px; height: 34px; border-radius: 9px; border: 2px solid var(--line); background: #fff; font-weight: 700; color: var(--navy); }
+.stepper b { min-width: 22px; text-align: center; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 12px; overflow: hidden; }
+.tbl th, .tbl td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.tbl th { background: var(--bg); color: var(--grey); font-size: 11px; text-transform: uppercase; }
+.tbl tr.doubt td { background: var(--yel-bg); }
+.person { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.person .avatar { background: var(--royal); }
+.person > div { flex: 1; min-width: 0; font-size: 13px; }
+.person strong { color: var(--navy); font-size: 14px; }
+
+/* plan (maquette) */
+.plan svg { width: 100%; height: auto; background: #FBFBFD; border: 1px solid var(--line); border-radius: 12px; }
+
+/* feuilles du bas, notifications */
+.scrim { position: absolute; inset: 0; background: rgba(21, 19, 43, .45); display: flex; align-items: flex-end; z-index: 20; animation: fade .15s; }
+.sheet { background: #fff; width: 100%; max-height: 86%; overflow: auto; border-radius: 20px 20px 0 0; padding: 14px 16px 20px; animation: up .2s ease-out; }
+.phone.pc .scrim { align-items: center; justify-content: center; }
+.phone.pc .sheet { width: 560px; border-radius: 18px; }
+.sheet__h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.sheet__h strong { color: var(--navy); font-size: 16px; }
+.x { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--bg); font-weight: 700; font-size: 16px; }
+.guide h5 { margin: 10px 0 4px; font-size: 13px; }
+.guide ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+.g-ok { color: var(--ok); }
+.g-ko { color: var(--ko); }
+.notif { position: absolute; top: 36px; left: 8px; right: 8px; z-index: 30; background: rgba(255, 255, 255, .97); border-radius: 16px; box-shadow: 0 10px 30px rgba(21, 19, 43, .3); padding: 10px 12px; display: flex; gap: 10px; align-items: center; text-align: left; border: 0; width: auto; animation: drop .25s ease-out; }
+.phone.pc .notif { left: auto; width: 360px; }
+.notif img { width: 36px; height: 36px; object-fit: contain; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
+.notif div { flex: 1; font-size: 13px; }
+.notif small { display: block; color: var(--grey); font-size: 11px; }
+.notif strong { color: var(--navy); }
+.toast { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 9px 14px; border-radius: 12px; font-size: 13px; z-index: 30; width: max-content; max-width: 88%; text-align: center; animation: fade .2s; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+@keyframes drop { from { transform: translateY(-30px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* connexion */
+.login { padding: 30px 18px; display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 0 auto; }
+.login img { width: 160px; margin: 10px auto 6px; }
+.login label { font-weight: 700; color: var(--navy); font-size: 14px; display: flex; flex-direction: column; gap: 5px; }
+</style>
+</head>
+<body>
+
+<header class="deck-head">
+  <div class="deck-head__in">
+    <img src="logo.png" alt="Euro Sanichauff">
+    <div>
+      <h1>Fiches chantier V2 · Lot A : maquettes cliquables</h1>
+      <p>Fiche en 8 étapes · 3 onglets Incorporation / Tableau de bord / Registre · réseau entre applis</p>
+    </div>
+    <span class="mock-flag">MAQUETTE · données fictives, rien n'est enregistré</span>
+  </div>
+</header>
+
+<div class="deck">
+  <div>
+    <div class="controls" role="group" aria-label="Réglages de la maquette">
+      <div class="ctl"><span>Affichage</span>
+        <div class="seg" id="ctl-mode">
+          <button data-mode="1" aria-pressed="true">1 appareil</button>
+          <button data-mode="2" aria-pressed="false">Réseau : 2 téléphones</button>
+        </div>
+      </div>
+      <div class="ctl" id="ctl-format-wrap"><span>Format</span>
+        <div class="seg" id="ctl-format">
+          <button data-format="tel" aria-pressed="true">Téléphone</button>
+          <button data-format="pc" aria-pressed="false">PC</button>
+        </div>
+      </div>
+      <div class="ctl"><span>Plans depuis l'Emplacement</span>
+        <div class="seg" id="ctl-plan">
+          <button data-plan="A" aria-pressed="false">A : Registre seulement</button>
+          <button data-plan="B" aria-pressed="true">B : lien « Voir le plan »</button>
+        </div>
+      </div>
+      <div class="ctl"><span>&nbsp;</span><button class="reset" id="ctl-reset">↺ Tout remettre à zéro</button></div>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+
+  <aside class="side">
+    <section class="panel">
+      <h2>Réseau entre applis : en direct</h2>
+      <p class="hint-side">Passez en « Réseau : 2 téléphones », envoyez une fiche à gauche : elle arrive à droite.</p>
+      <div class="flow" aria-hidden="true">
+        <div class="flow__n" id="fn-c"><b>📱</b>Compagnon</div><div class="flow__a" id="fa-cs">➜</div>
+        <div class="flow__n" id="fn-s"><b>☁</b>Serveur</div><div class="flow__a" id="fa-sp">➜</div>
+        <div class="flow__n" id="fn-p"><b>💻</b>Conducteur · Patron</div>
+        <div class="flow__mail"><div class="flow__n" id="fn-f" style="width:60%"><b>✉</b>Facturation (Excel en pièce jointe)</div></div>
+      </div>
+      <ol class="journal" id="journal" aria-live="polite"></ol>
+    </section>
+    <section class="panel">
+      <h2>Points à valider par Ismael</h2>
+      <ol class="todo">
+        <li><b>Plans</b> : variante A ou B ? (bouton en haut, puis étape 2 « Emplacement »)</li>
+        <li><b>Tableau de bord</b> : seulement patron + conducteur, le chef de chantier ne l'a pas. D'accord ?</li>
+        <li><b>Photos Alobees et cadre « Validation » de la fiche papier</b> : remplacés par le rappel de l'étape 7, la case unique de l'étape 8 et la validation du conducteur. D'accord ?</li>
+        <li><b>Signature</b> : remplacée par le compte connecté (nom + date + heure). D'accord ?</li>
+        <li><b>Excel facturation</b> : il part dès l'envoi si la case est cochée. Ou seulement après la validation du conducteur ?</li>
+        <li><b>Anomalie</b> : une note facultative peut être écrite sous le point. D'accord ?</li>
+        <li><b>Envoi avec anomalie</b> : autorisé, l'anomalie est signalée en rouge au conducteur. D'accord ?</li>
+      </ol>
+    </section>
+  </aside>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   DONNÉES FICTIVES (maquette). Les textes des points viennent du gabarit
+   outils/fiche_gabarit.py (contenu.json v1), qui reste la source de vérité.
+   ===================================================================== */
+const AUJ = new Date(2026, 9, 5);
+const SECS = [
+  { n: 4, titre: 'Documents', long: 'Documents à avoir avant de commencer', alerte: "INTERDIT : incorporer à partir d'un ancien plan ou d'une cote non vérifiée.",
+    items: [['d1', "Plan d'exécution à jour et dernier indice vérifié"], ['d2', 'Plan architecte / cloisons à jour'], ['d3', 'Plan de réservations / incorporations'], ['d4', 'Repérage des logements et gaines techniques'], ['d5', 'Modifications chantier connues et validées']],
+    guide: { faire: ["Vérifier l'indice du plan d'exécution avec le chef avant de commencer.", 'Repérer les logements et les gaines techniques sur le plan avant de tracer.'], attention: ["Ne jamais incorporer à partir d'un ancien plan ou d'une cote non vérifiée.", 'Une modification de chantier non validée par écrit ne s\'applique pas.'] } },
+  { n: 5, titre: 'Matériel', long: 'Caisse / matériel incorporation', alerte: null,
+    items: [['m1', 'EPI obligatoires : gants, casque, lunettes, chaussures de sécurité'], ['m2', 'Tenailles'], ['m3', 'Mètre / décamètre'], ['m4', 'Marqueurs indélébiles'], ['m5', 'Bombe de traçage'], ['m6', 'Fixations adaptées'], ['m7', 'Gaines / fourreaux aux bons diamètres'], ['m8', "Résaboîtes / boîtes d'attente"], ['m9', "Bobine de ligature / colliers / fil d'attache"], ['m10', 'Meuleuse / visseuse / perforateur / rallonge + batteries']],
+    guide: { faire: ['Préparer la caisse la veille : gaines aux bons diamètres, bouchons, fixations, ligature.', 'Batteries chargées, rallonge et EPI vérifiés avant de monter sur la dalle.'], attention: ["EPI obligatoires sur toute la durée de l'intervention.", 'Matériel manquant : le signaler en anomalie avec une note, ne pas improviser.'] } },
+  { n: 6, titre: 'Contrôles', long: "Contrôles avant et pendant l'incorporation", alerte: 'EN CAS DE DOUTE SUR UNE COTE OU UNE IMPLANTATION : STOP. Appeler le chef de chantier.',
+    items: [['c1', 'Bon logement et bonne zone identifiés'], ['c2', 'Axes des cloisons repérés avant pose'], ['c3', 'Position des appareils sanitaires, radiateurs, nourrices vérifiée'], ['c4', 'EF / ECS / chauffage correctement repérés'], ['c5', 'Diamètres conformes aux plans'], ['c6', 'Sorties positionnées et cotées par rapport à des repères fixes'], ['c7', 'Gaines solidement fixées : aucun déplacement pendant le coulage'], ['c8', 'Aucune gaine pincée, écrasée ou fortement coudée'], ['c9', 'Toutes les extrémités bouchonnées contre le béton'], ['c10', 'Attentes protégées et identifiées'], ['c11', 'Croisements et épaisseurs compatibles avec la dalle'], ['c12', 'Zone nettoyée avant autocontrôle final']],
+    guide: { faire: ['Coter chaque sortie par rapport à des repères fixes (murs, poteaux, axes).', 'Fixer les gaines tous les 50 cm environ, et à chaque changement de direction.', 'Bouchonner chaque extrémité dès la pose.'], attention: ['Aucune gaine pincée, écrasée ou trop coudée (rayon de cintrage).', "Vérifier que les croisements sont compatibles avec l'épaisseur de la dalle.", 'En cas de doute : STOP, on appelle le chef de chantier.'] } },
+];
+const ALL_ITEMS = SECS.flatMap(s => s.items);
+const ITEM_LABEL = Object.fromEntries(ALL_ITEMS);
+const RAPPELS = [
+  "J'ai travaillé avec le plan au dernier indice, et aucune cote n'a été prise sur un ancien plan.",
+  'Le bon logement et la bonne zone sont identifiés, les axes des cloisons sont repérés.',
+  'Les gaines sont fixées solidement : elles ne bougeront pas au coulage.',
+  "Toutes les extrémités sont bouchonnées, aucune gaine n'est pincée ni écrasée.",
+  'EF / ECS / chauffage sont repérés, les attentes sont protégées et identifiées.',
+  'Les photos sont faites dans Alobees, avec des repères fixes visibles, et classées au bon logement.',
+  "En cas de doute ou d'anomalie, le chef de chantier a été prévenu AVANT le coulage.",
+];
+const ALOBEES = ['Vue générale de chaque logement / zone', 'Passages principaux des gaines', 'Sorties sanitaires et alimentations EF / ECS', 'Réseaux chauffage et nourrices / attentes', 'Traversées et réservations particulières', 'Photo avec repères fixes visibles'];
+const STEPS = ['Chantier', 'Emplacement', 'Équipe', 'Documents', 'Matériel', 'Contrôles', 'Photos', 'Envoi'];
+const MAIL_FACTU = 'facture.eurosanichauff@gmail.com';
+
+const PROFILS = {
+  compagnon:   { nom: 'Karim B.',   role: 'Compagnon',              tabs: ['inc'],               nouvelle: true,  recues: null },
+  chef:        { nom: 'Julien M.',  role: 'Chef de chantier',       tabs: ['inc'],               nouvelle: true,  recues: 'chef' },
+  conducteur:  { nom: 'Sophie D.',  role: 'Conducteur de travaux',  tabs: ['inc', 'tdb', 'reg'], nouvelle: true,  recues: 'conducteur', valide: true, registre: 'siens' },
+  patron:      { nom: 'Direction',  role: 'Patron (admin)',         tabs: ['inc', 'tdb', 'reg'], nouvelle: true,  recues: 'tous', valide: 'absence', registre: 'admin' },
+  facturation: { nom: 'Nadia F.',   role: 'Facturation',            tabs: ['inc'],               nouvelle: false, recues: 'validees' },
+};
+const PERSONNES = [
+  ['Direction', 'Patron (admin)', 'direction'], ['Sophie D.', 'Conducteur de travaux', 'sophie.d'], ['Patrick V.', 'Conducteur de travaux', 'patrick.v'],
+  ['Julien M.', 'Chef de chantier', 'julien.m'], ['Thomas L.', "Chef d'équipe", 'thomas.l'], ['Karim B.', 'Compagnon', 'karim.b'],
+  ['Mehdi R.', 'Compagnon', 'mehdi.r'], ['Lucas P.', 'Compagnon', 'lucas.p'], ['Nadia F.', 'Facturation', 'nadia.f'],
+];
+
+let SRV, DRAFTS, PHONES, MODE = 1, FORMAT = 'tel', PLAN_VARIANT = 'B', CLOCK, SEQ;
+
+function seed() {
+  CLOCK = 10 * 60 + 12; SEQ = 146;
+  SRV = {
+    chantiers: [
+      { id: 'til', nom: 'Résidence Les Tilleuls', ville: 'Lille', adresse: '12 rue des Tilleuls, 59000 Lille', client: 'Promoteur EXEMPLE', dates: '09/2026 → 06/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [7, 10],
+        bats: [{ nom: 'Bât A', niv: [3, 4, 4, 4] }, { nom: 'Bât B', niv: [2, 3, 3, 4] }], plans: { 'Bât A|1': 'C', 'Bât A|2': 'C' }, equipe: ['Julien M.', 'Thomas L.', 'Karim B.', 'Mehdi R.'] },
+      { id: 'jar', nom: 'Les Jardins du Parc', ville: 'Armentières', adresse: '3 allée du Parc, 59280 Armentières', client: 'Bailleur EXEMPLE', dates: '10/2026 → 09/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [15, 10],
+        bats: [{ nom: 'Bât 1', niv: [4, 4, 4, 4] }], plans: {}, equipe: ['Julien M.', 'Karim B.', 'Lucas P.'] },
+      { id: 'clo', nom: 'Le Clos Saint-Jean', ville: 'Lomme', adresse: '8 rue Saint-Jean, 59160 Lomme', client: 'Promoteur EXEMPLE 2', dates: '06/2026 → 03/2027', conducteur: 'Patrick V.', chef: 'Julien M.', coulage: [22, 10],
+        bats: [{ nom: 'Bât A', niv: [5, 5, 5] }], plans: { 'Bât A|0': 'B' }, equipe: ['Mehdi R.', 'Lucas P.'] },
+    ],
+    fiches: [],
+    log: [],
+  };
+  const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
+    id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, auteurProfil: auteur === 'Karim B.' ? 'compagnon' : null,
+    date: '02/10/2026', coulage: '07/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: [auteur],
+    rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false,
+    vu: {}, histo: [['Envoyée', '02/10 16:40']], valideur: null, motif: null,
+  }, extra || {}));
+  mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
+  mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
+  mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
+  mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, facturation: 1 }, valideur: 'Patrick V.', coulage: '03/10/2026' });
+  mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
+  mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Karim B.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
+  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Mehdi R.', [], { histo: [['Envoyée', '05/10 09:58']] });
+  mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Karim B.', [], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, motif: 'Photo manquante : ajouter les photos des nourrices', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
+  DRAFTS = {};
+}
+
+function newPhone(profil) {
+  return { profil, tab: 'inc', seg: null, regSeg: 'ch', online: true, scr: { n: 'home' }, hist: [], sheet: null, notif: null, toast: null, loggedOut: false, scroll: {} };
+}
+
+/* ============================ utilitaires ============================ */
+const h = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nivL = n => (n === 0 ? 'RDC' : 'R+' + n);
+const code = (n, i) => String(n).padStart(2, '0') + i;
+const chantier = id => SRV.chantiers.find(c => c.id === id);
+const fiche = id => SRV.fiches.find(f => f.id === id);
+const P = p => PROFILS[p.profil];
+const initials = s => s.split(/\s|\./).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+const pad = n => String(n).padStart(2, '0');
+function now() { CLOCK += 1 + Math.floor(Math.random() * 3); return pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60); }
+const fmtD = d => pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
+const jour = d => d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+const lieu = f => `${f.bat} · ${nivL(f.niv)} · ${f.logs.join(' ')}`;
+const nbKo = f => Object.values(f.rep).filter(v => v === 'ko').length;
+const STATUT = { attente: ['En attente de réseau', 'p-attente'], envoyee: ['Envoyée', 'p-envoyee'], recue: ['Reçue', 'p-recue'], validee: ['Validée 🔒', 'p-validee'], corriger: ['À corriger', 'p-corriger'] };
+const pill = f => `<span class="pill ${STATUT[f.statut][1]}">${STATUT[f.statut][0]}</span>`;
+const aControler = f => f.statut === 'envoyee' || f.statut === 'recue';
+const ICON = {
+  inc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 12l2 2 4-4M9 17h6"/></svg>',
+  tdb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  reg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+};
+
+/* Qui reçoit quoi (§ 3 de CONCEPTION_V2) */
+function recuesPour(profil) {
+  const pr = PROFILS[profil], nom = pr.nom;
+  return SRV.fiches.filter(f => f.statut !== 'attente').filter(f => {
+    const c = chantier(f.ch);
+    switch (pr.recues) {
+      case 'tous': return true;
+      case 'conducteur': return c.conducteur === nom;
+      case 'chef': return c.chef === nom;
+      case 'validees': return f.statut === 'validee';
+      default: return false;
+    }
+  }).sort((a, b) => b.id - a.id);
+}
+function badgeFor(profil) {
+  const pr = PROFILS[profil];
+  if (!pr.recues) return 0;
+  return recuesPour(profil).filter(f => !f.vu[profil] && (pr.recues === 'validees' ? f.statut === 'validee' : aControler(f))).length;
+}
+function mesFiches(profil) {
+  const nom = PROFILS[profil].nom;
+  return SRV.fiches.filter(f => f.auteur === nom).sort((a, b) => b.id - a.id);
+}
+/* Couleur d'un logement (§ 6) : dérivée des fiches + brouillons en cours */
+function etatLogement(chId, bat, niv, c) {
+  const fs = SRV.fiches.filter(f => f.ch === chId && f.bat === bat && f.niv === niv && f.logs.includes(c)).sort((a, b) => b.id - a.id);
+  const f = fs[0];
+  if (f) {
+    if (f.statut === 'validee') return 'vert';
+    if (aControler(f)) return nbKo(f) ? 'rouge' : 'bleu';
+    return 'jaune';
+  }
+  const enCours = Object.values(DRAFTS).some(d => d && d.ch === chId && d.bat === bat && d.niv === niv && d.logs.includes(c));
+  return enCours ? 'jaune' : 'gris';
+}
+const ETATS = { vert: ['Validé', '✓'], bleu: ['À valider', '•'], rouge: ['Anomalie', '!'], jaune: ['En cours', '…'], gris: ['À faire', ''] };
+function statsChantier(c) {
+  const out = { total: 0, vert: 0, bleu: 0, rouge: 0, jaune: 0, gris: 0 };
+  c.bats.forEach(b => b.niv.forEach((nb, n) => { for (let i = 1; i <= nb; i++) { out.total++; out[etatLogement(c.id, b.nom, n, code(n, i))]++; } }));
+  const fs = SRV.fiches.filter(f => f.ch === c.id);
+  out.aCtrl = fs.filter(aControler).length;
+  out.ano = fs.filter(f => aControler(f) && nbKo(f)).length;
+  return out;
+}
+
+/* ============================ réseau (simulé) ============================ */
+function log(de, vers, txt, type) {
+  SRV.log.push({ t: now(), de, vers, txt, type: type || '' });
+  renderJournal(de, vers);
+}
+function notify(profils, title, body, ficheId) {
+  PHONES.forEach(p => {
+    if (profils.includes(p.profil) && p.online && !p.loggedOut) {
+      p.notif = { title, body, ficheId };
+      clearTimeout(p._nt); p._nt = setTimeout(() => { p.notif = null; renderAll(); }, 7000);
+    }
+  });
+}
+function destinataires(f) {
+  const c = chantier(f.ch), out = ['patron'];
+  if (c.conducteur === PROFILS.conducteur.nom) out.push('conducteur');
+  if (c.chef === PROFILS.chef.nom) out.push('chef');
+  return out;
+}
+function transmettre(f, correction) {
+  f.statut = 'envoyee'; f.vu = {};
+  const t = now();
+  f.histo.push([correction ? 'Renvoyée après correction' : 'Envoyée', fmtD(AUJ) + ' ' + t]);
+  log(f.auteur, 'Serveur', `${f.num} ${correction ? 'renvoyée après correction' : 'envoyée'} (${chantier(f.ch).nom}, ${lieu(f)})`);
+  setTimeout(() => {
+    const c = chantier(f.ch);
+    log('Serveur', 'Conducteur · Patron · Chef', `🔔 Notification « Nouvelle fiche : ${c.nom}, ${f.bat} ${nivL(f.niv)} » + badge`, 't-notif');
+    notify(destinataires(f), 'Nouvelle fiche ' + f.num, `${c.nom} · ${lieu(f)}${nbKo(f) ? ' · ⚠ ' + nbKo(f) + ' anomalie' : ''}`, f.id);
+    if (f.excel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 600);
+    renderAll();
+  }, 700);
+}
+function ouvrirFiche(p, f) {
+  const first = !f.vu[p.profil];
+  f.vu[p.profil] = 1;
+  if (first && f.statut === 'envoyee' && P(p).valide) {
+    f.statut = 'recue';
+    f.histo.push(['Reçue par ' + P(p).nom, fmtD(AUJ) + ' ' + now()]);
+    log('Serveur', f.auteur, `${f.num} reçue et ouverte par ${P(p).nom}`);
+    if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' reçue', `Ouverte par ${P(p).nom}`, f.id);
+  }
+}
+
+/* ============================ navigation ============================ */
+function go(p, scr) { p.hist.push(p.scr); p.scr = scr; p.sheet = null; }
+function back(p) { p.scr = p.hist.pop() || { n: 'home' }; p.sheet = null; }
+function toast(p, txt) { p.toast = txt; clearTimeout(p._tt); p._tt = setTimeout(() => { p.toast = null; renderAll(); }, 2600); }
+function setTab(p, t) { p.tab = t; p.scr = { n: 'home' }; p.hist = []; p.sheet = null; }
+
+/* ============================ brouillon / étapes ============================ */
+function newDraft(p) {
+  const pr = P(p);
+  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: [pr.nom], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, step: 1, visited: 1, fixOf: null };
+}
+function stepOk(d, n) {
+  switch (n) {
+    case 1: return !!d.ch;
+    case 2: return !!d.bat && d.niv !== null && d.logs.length > 0;
+    case 3: return !!d.coulage && !!d.chef && d.comps.length > 0;
+    case 4: case 5: case 6: return SECS[n - 4].items.every(([id]) => d.rep[id]);
+    case 7: return d.visited > 7;
+    default: return false;
+  }
+}
+const canReach = (d, k) => { for (let i = 1; i < k; i++) if (!stepOk(d, i)) return false; return true; };
+function missing(d, n) {
+  if (n === 1) return 'Choisissez un chantier';
+  if (n === 2) { const m = []; if (!d.bat) m.push('le bâtiment'); if (d.niv === null) m.push('le niveau'); if (!d.logs.length) m.push('au moins 1 logement'); return 'Choisissez ' + m.join(', '); }
+  if (n === 3) { const m = []; if (!d.coulage) m.push('la date de coulage'); if (!d.chef) m.push('le chef de chantier'); if (!d.comps.length) m.push('au moins 1 compagnon'); return 'Indiquez ' + m.join(', '); }
+  if (n >= 4 && n <= 6) { const s = SECS[n - 4]; const r = s.items.filter(([id]) => !d.rep[id]).length; return `Encore ${r} point${r > 1 ? 's' : ''} sans réponse (Fait ou Anomalie)`; }
+  return '';
+}
+
+/* ============================ rendu ============================ */
+function renderAll() {
+  PHONES.forEach((p, i) => renderPhone(p, document.getElementById('phone-' + i)));
+}
+function renderPhone(p, el) {
+  if (!el) return;
+  const ae = document.activeElement, focusSel = el.contains(ae) && ae.dataset && ae.dataset.a ? `[data-a="${ae.dataset.a}"]${ae.dataset.v !== undefined ? `[data-v="${CSS.escape(ae.dataset.v)}"]` : ''}` : null;
+  const mainOld = el.querySelector('.main');
+  const key = p.tab + '|' + JSON.stringify(p.scr) + '|' + (DRAFTS[p.profil]?.step || '');
+  if (mainOld && p._key) p.scroll[p._key] = mainOld.scrollTop;
+  const pr = P(p);
+  if (!pr.tabs.includes(p.tab)) setTab(p, 'inc');
+  let body;
+  if (p.loggedOut) body = viewLogin(p);
+  else if (p.scr.n === 'wizard') body = viewWizard(p);
+  else body = viewTab(p);
+  el.innerHTML = `<div class="app">
+    <div class="sbar"><span>${pad(Math.floor(CLOCK / 60))}:${pad(CLOCK % 60)}</span>
+      <button class="net ${p.online ? '' : 'off'}" data-a="net" title="Cliquer pour simuler une coupure de réseau">${p.online ? '📶 Réseau' : '✈ Hors réseau'}</button></div>
+    ${body}
+    ${p.sheet ? `<div class="scrim" data-a="sheet-x"><div class="sheet" role="dialog" aria-modal="true" data-stop>${viewSheet(p)}</div></div>` : ''}
+    ${p.notif ? `<button class="notif" data-a="notif"><img src="logo.png" alt=""><div><small>FICHES CHANTIER · maintenant</small><strong>${h(p.notif.title)}</strong><br>${h(p.notif.body)}</div></button>` : ''}
+    ${p.toast ? `<div class="toast" role="status">${h(p.toast)}</div>` : ''}
+  </div>`;
+  const mainNew = el.querySelector('.main');
+  if (mainNew && p.scroll[key] != null && key === p._key) mainNew.scrollTop = p.scroll[key];
+  p._key = key;
+  // garde le focus clavier sur le même bouton après le re-rendu
+  const target = (focusSel && el.querySelector(focusSel)) || (focusSel && el.querySelector('.sheet .x'));
+  if (target) target.focus({ preventScroll: true });
+}
+function topbar(p, title, sub, withBack) {
+  return `<div class="top">
+    ${withBack ? '<button class="top__back" data-a="back" aria-label="Retour">‹</button>' : '<img class="top__logo" src="logo.png" alt="Euro Sanichauff">'}
+    <div class="top__t"><strong>${h(title)}</strong><span>${h(sub)}</span></div>
+    <button class="avatar" data-a="me" aria-label="Mon compte : ${h(P(p).nom)}">${initials(P(p).nom)}</button>
+  </div>`;
+}
+function tabbar(p) {
+  const tabs = P(p).tabs;
+  if (tabs.length < 2) return '';
+  const lbl = { inc: 'Incorporation', tdb: 'Tableau de bord', reg: 'Registre' };
+  const b = badgeFor(p.profil);
+  return `<nav class="tabs" aria-label="Onglets">${tabs.map(t => `<button data-a="tab" data-v="${t}" ${p.tab === t ? 'aria-current="page"' : ''}>${ICON[t]}${lbl[t]}${t === 'inc' && b ? `<span class="badge" aria-label="${b} nouvelle(s)">${b}</span>` : ''}</button>`).join('')}</nav>`;
+}
+function viewTab(p) {
+  const s = p.scr, pr = P(p);
+  let title = 'Incorporation', sub = pr.nom + ' · ' + pr.role, content, back = p.hist.length > 0;
+  if (s.n === 'sent') { title = 'Fiche envoyée'; content = viewSent(p); back = false; }
+  else if (s.n === 'fiche') { const f = fiche(s.id); title = 'Fiche ' + f.num; sub = chantier(f.ch).nom; content = viewFiche(p, f); }
+  else if (p.tab === 'inc') { content = viewIncHome(p); }
+  else if (p.tab === 'tdb') {
+    title = 'Tableau de bord'; sub = 'Incorporations avant coulage';
+    content = s.n === 'tdb-ch' ? viewTdbChantier(p, chantier(s.id)) : viewTdb(p);
+    if (s.n === 'tdb-ch') sub = chantier(s.id).nom;
+  } else if (p.tab === 'reg') {
+    title = 'Registre'; sub = pr.registre === 'admin' ? 'Administration' : 'Lecture · vos chantiers modifiables';
+    if (s.n === 'reg-ch') { content = viewRegChantier(p, chantier(s.id)); sub = chantier(s.id).nom; }
+    else if (s.n === 'reg-import') { content = viewImport(p, chantier(s.id), s); title = 'Importer'; sub = chantier(s.id).nom; }
+    else content = viewReg(p);
+  }
+  return topbar(p, title, sub, back) + `<div class="main"><div class="main__in">${content}</div></div>` + tabbar(p);
+}
+
+/* ---------- Incorporation : accueil ---------- */
+function viewIncHome(p) {
+  const pr = P(p), d = DRAFTS[p.profil];
+  if (!p.seg) p.seg = pr.recues && !pr.nouvelle ? 'recues' : (pr.recues && pr.valide ? 'recues' : 'mes');
+  let out = '';
+  if (pr.nouvelle) {
+    out += d
+      ? `<button class="btn btn--gold btn--big" data-a="resume">▶ Reprendre ma fiche en cours<br></button><p class="muted" style="margin:6px 0 4px;text-align:center">Brouillon : étape ${d.step}/8 · ${d.ch ? h(chantier(d.ch).nom) : 'chantier à choisir'} · gardé sur le téléphone</p>
+         <button class="link" data-a="discard" style="display:block;margin:0 auto 10px">Abandonner ce brouillon</button>`
+      : `<button class="btn btn--gold btn--big" data-a="new">＋ Nouvelle fiche d'incorporation</button><div style="height:14px"></div>`;
+  }
+  const b = badgeFor(p.profil);
+  if (pr.recues && pr.nouvelle) {
+    out += `<div class="seg-in"><button data-a="seg" data-v="mes" aria-pressed="${p.seg === 'mes'}">Mes fiches</button><button data-a="seg" data-v="recues" aria-pressed="${p.seg === 'recues'}">Reçues${b ? `<span class="badge badge--in">${b}</span>` : ''}</button></div>`;
+  }
+  const seg = pr.recues ? (pr.nouvelle ? p.seg : 'recues') : 'mes';
+  if (seg === 'mes') {
+    const fs = mesFiches(p.profil);
+    out += pr.recues ? '' : '<h3>Mes fiches</h3>';
+    out += fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, false)).join('')}</div>` : '<p class="empty">Aucune fiche envoyée pour l\'instant.</p>';
+  } else {
+    const fs = recuesPour(p.profil);
+    if (pr.recues === 'validees') out += `<h3>Fiches validées${b ? `<span class="badge badge--in">${b}</span>` : ''}</h3><p class="lead">Seules les fiches validées par le conducteur arrivent ici.</p>`;
+    else if (pr.recues === 'chef') out += '<p class="lead">Fiches de vos chantiers. Consultation seule : la validation est faite par le conducteur.</p>';
+    else if (pr.valide === 'absence') out += '<p class="lead">Toutes les fiches. Vous pouvez valider si le conducteur est absent.</p>';
+    const ctrl = fs.filter(aControler), autres = fs.filter(f => !aControler(f));
+    if (pr.recues !== 'validees' && ctrl.length) out += `<h3>À contrôler (${ctrl.length})</h3><div class="list">${ctrl.map(f => rowFiche(p, f, true)).join('')}</div><h3>Autres fiches</h3>`;
+    const rest = pr.recues === 'validees' ? fs : autres;
+    out += rest.length ? `<div class="list">${rest.map(f => rowFiche(p, f, true)).join('')}</div>` : '<p class="empty">Rien pour l\'instant.</p>';
+  }
+  return out;
+}
+function rowFiche(p, f, recue) {
+  const c = chantier(f.ch), isNew = recue && !f.vu[p.profil];
+  return `<button class="row-btn" data-a="open" data-v="${f.id}">
+    ${isNew ? '<span class="dot-new" aria-label="Nouvelle"></span>' : ''}
+    <div class="row-btn__main"><strong>${h(c.nom)}</strong><span>${h(lieu(f))}</span>
+    <span>${f.num} · coulage ${f.coulage.slice(0, 5)}${recue ? ' · par ' + h(f.auteur) : ''}</span>
+    <span style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${pill(f)}${nbKo(f) ? `<span class="pill p-ko">⚠ ${nbKo(f)} anomalie</span>` : ''}</span></div>
+    <span class="chev" aria-hidden="true">›</span></button>`;
+}
+
+/* ---------- Fiche (consultation / contrôle) ---------- */
+function viewFiche(p, f) {
+  const c = chantier(f.ch), pr = P(p);
+  const kos = ALL_ITEMS.filter(([id]) => f.rep[id] === 'ko');
+  const st = f.statut;
+  const steps = [['Envoyée', ['envoyee', 'recue', 'validee', 'corriger'].includes(st)], ['Reçue', ['recue', 'validee', 'corriger'].includes(st)], [st === 'corriger' ? 'À corriger' : 'Validée', st === 'validee' || st === 'corriger']];
+  let out = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">${pill(f)}${kos.length ? `<span class="pill p-ko">⚠ ${kos.length} anomalie</span>` : ''}</div>
+    <div class="track" aria-label="Suivi de la fiche">${steps.map(([l, on], i) => `<div class="track__s ${on ? 'on' : ''} ${i === 2 && st === 'corriger' ? 'warn' : ''}">${l}</div>`).join('')}</div>`;
+  if (st === 'attente') out += '<div class="info">📵 Pas de réseau : la fiche est gardée sur le téléphone. Elle partira toute seule dès que le réseau revient.</div>';
+  if (st === 'corriger') out += `<div class="alert">↩ À corriger : ${h(f.motif)}</div>`;
+  out += `<div class="card"><dl class="kv">
+    <dt>Chantier</dt><dd>${h(c.nom)}</dd><dt>Emplacement</dt><dd>${h(lieu(f))}</dd>
+    <dt>Incorporation</dt><dd>${h(f.date)}</dd><dt>Coulage prévu</dt><dd>${h(f.coulage)}</dd>
+    <dt>Chef de chantier</dt><dd>${h(f.chef)}</dd><dt>Équipe</dt><dd>${h([f.chefEq, ...f.comps].filter(Boolean).join(', '))}</dd>
+    <dt>Rempli par</dt><dd>${h(f.auteur)}</dd></dl></div>`;
+  if (kos.length) out += `<h3 style="color:var(--ko)">Anomalies signalées</h3><div class="alert" style="font-weight:400">${kos.map(([id, l]) => `<div style="margin-bottom:4px"><b>✗ ${h(l)}</b>${f.notes[id] ? `<br><i>« ${h(f.notes[id])} »</i>` : ''}</div>`).join('')}</div>`;
+  out += '<h3>Réponses</h3>' + SECS.map(s => {
+    const n = s.items.length, ok = s.items.filter(([id]) => f.rep[id] === 'ok').length;
+    return `<details class="sec"><summary><span>${s.titre}</span><span>${ok}/${n} ✓</span></summary><ul>${s.items.map(([id, l]) => `<li>${f.rep[id] === 'ko' ? '<span class="r-ko">✗</span>' : '<span class="r-ok">✓</span>'}${h(l)}</li>`).join('')}</ul></details>`;
+  }).join('');
+  const nph = f.photos.length || f.nbPhotosDemo;
+  out += `<h3>Photos (${nph})</h3>` + (nph ? `<div class="ph-grid">${f.photos.length ? f.photos.map(ph => `<div class="ph"><img src="${ph.src}" alt="Photo jointe"></div>`).join('') : Array.from({ length: nph }, (_, i) => `<div class="ph">photo ${i + 1}<br>(exemple)</div>`).join('')}</div>` : '<p class="muted">Aucune photo jointe.</p>');
+  if (f.obs) out += `<h3>Observations</h3><div class="card">${h(f.obs)}</div>`;
+  out += `<h3>Historique</h3><div class="card" style="font-size:13px">${f.histo.map(([l, t]) => `<div>• ${h(t)} : ${h(l)}</div>`).join('')}</div>`;
+
+  // actions selon le profil
+  let act = '';
+  if (st === 'validee') {
+    act += `<div class="lock">🔒 Validée par ${h(f.valideur)} : verrouillée, plus modifiable.</div>`;
+    if (pr.valide || pr.recues === 'validees') act += `<button class="btn btn--ghost btn--block" data-a="xlsx">⬇ Télécharger l'Excel</button>`;
+    if (pr.valide) act += `<button class="btn btn--ghost btn--block" data-a="mail-factu" data-v="${f.id}">✉ Envoyer l'Excel à la facturation</button>`;
+  } else if (aControler(f) && pr.valide) {
+    act += `<button class="btn btn--ok btn--big" data-a="valider" data-v="${f.id}">✓ Valider la fiche</button>
+            <button class="btn btn--ko btn--block" data-a="corriger" data-v="${f.id}">↩ Renvoyer à corriger</button>`;
+    if (pr.valide === 'absence') act += '<p class="muted" style="text-align:center;margin:0">Normalement validée par le conducteur. Possible ici s\'il est absent.</p>';
+  } else if (aControler(f) && pr.recues === 'chef') {
+    act += '<div class="info">Consultation seule : la validation est faite par le conducteur de travaux.</div>';
+  } else if (st === 'corriger' && f.auteur === pr.nom) {
+    act += `<button class="btn btn--gold btn--big" data-a="reprendre" data-v="${f.id}">✎ Corriger et renvoyer</button>`;
+  }
+  return out + (act ? `<div class="actions">${act}</div>` : '');
+}
+
+/* ---------- Écran après envoi ---------- */
+function viewSent(p) {
+  const f = fiche(p.scr.id);
+  const st = f.statut;
+  return `<div style="text-align:center;padding:10px 0 4px"><div style="font-size:54px">${st === 'attente' ? '📵' : '✅'}</div>
+    <h3 style="font-size:17px;text-transform:none">${st === 'attente' ? 'Fiche prête, en attente de réseau' : 'Fiche ' + f.num + ' envoyée au bureau'}</h3>
+    <p class="lead">${st === 'attente' ? 'Elle est gardée sur le téléphone et partira toute seule dès que le réseau revient.' : 'Le conducteur et le patron sont prévenus. Vous serez notifié quand elle sera validée.'}</p></div>
+    ${viewFicheTrackOnly(f)}
+    ${f.excel ? `<div class="info">✉ L'Excel part en pièce jointe à ${MAIL_FACTU} (envoyé par le serveur).</div>` : ''}
+    <button class="btn btn--primary btn--block" data-a="home">Retour à mes fiches</button>`;
+}
+function viewFicheTrackOnly(f) {
+  const st = f.statut;
+  const s = [['Envoyée', st !== 'attente'], ['Reçue', ['recue', 'validee', 'corriger'].includes(st)], [st === 'corriger' ? 'À corriger' : 'Validée', st === 'validee' || st === 'corriger']];
+  return `<div class="card" style="margin-bottom:12px"><strong style="color:var(--navy)">${f.num} · ${h(lieu(f))}</strong><div class="track">${s.map(([l, on]) => `<div class="track__s ${on ? 'on' : ''}">${l}</div>`).join('')}</div></div>`;
+}
+
+/* ---------- Assistant 8 étapes ---------- */
+function viewWizard(p) {
+  const d = DRAFTS[p.profil], n = d.step;
+  const squares = STEPS.map((l, i) => {
+    const k = i + 1, reach = canReach(d, k) && (k <= d.visited || stepOk(d, k - 1));
+    return `<button data-a="step" data-v="${k}" class="${stepOk(d, k) ? 'done' : ''}" ${k === n ? 'aria-current="step"' : ''} ${reach ? '' : 'disabled'} aria-label="Étape ${k} : ${l}${stepOk(d, k) ? ' (faite)' : ''}" title="${l}">${k}</button>`;
+  }).join('');
+  const top = `<div class="top"><button class="top__back" data-a="quit" aria-label="Quitter (le brouillon est gardé)">✕</button>
+    <div class="top__t"><strong>${d.fixOf ? 'Correction ' + fiche(d.fixOf).num : 'Nouvelle fiche'}</strong><span>Étape ${n}/8 · ${STEPS[n - 1]}</span></div>
+    <button class="avatar" data-a="me" aria-label="Mon compte">${initials(P(p).nom)}</button></div>
+    <nav class="steps" aria-label="Étapes de la fiche">${squares}</nav>`;
+  const views = [null, stepChantier, stepEmplacement, stepEquipe, stepPoints, stepPoints, stepPoints, stepPhotos, stepEnvoi];
+  const content = views[n](p, d, n);
+  let foot = '';
+  if (n < 8) {
+    const ok = stepOk(d, n) || n === 7;
+    foot = `<div class="foot">${ok ? '' : `<p class="foot__hint" id="why-${p.id}">${h(missing(d, n))}</p>`}
+      <div class="foot__row"><button class="btn btn--ghost" data-a="prev" ${n === 1 ? 'disabled' : ''}>‹ Retour</button>
+      <button class="btn btn--primary" data-a="next" ${ok ? '' : `disabled aria-describedby="why-${p.id}"`}>${n === 7 && !d.photos.length ? 'Passer ›' : 'Suivant ›'}</button></div></div>`;
+  }
+  return top + `<div class="main"><div class="main__in">${content}</div></div>` + foot;
+}
+function stepChantier(p, d) {
+  return `<h3>Sur quel chantier ?</h3><div class="list">${SRV.chantiers.map(c => `<button class="row-btn" data-a="pick-ch" data-v="${c.id}" aria-pressed="${d.ch === c.id}" style="${d.ch === c.id ? 'border:2px solid var(--navy);background:#EEF0F8' : ''}">
+    <div class="row-btn__main"><strong>${h(c.nom)}</strong><span>${h(c.ville)} · ${c.bats.length} bâtiment${c.bats.length > 1 ? 's' : ''}</span></div>${d.ch === c.id ? '<b style="color:var(--navy)">✓</b>' : ''}</button>`).join('')}</div>`;
+}
+function stepEmplacement(p, d) {
+  const c = chantier(d.ch), b = c.bats.find(x => x.nom === d.bat);
+  let out = `<div class="field"><div class="field__l">Bâtiment</div><div class="chips">${c.bats.map(x => `<button class="chip" data-a="pick-bat" data-v="${h(x.nom)}" aria-pressed="${d.bat === x.nom}">${h(x.nom)}</button>`).join('')}</div></div>`;
+  out += `<div class="field"><div class="field__l">Niveau</div><div class="chips">${b ? b.niv.map((_, n) => `<button class="chip" data-a="pick-niv" data-v="${n}" aria-pressed="${d.niv === n}">${nivL(n)}</button>`).join('') : '<span class="muted">Choisissez d\'abord le bâtiment</span>'}</div></div>`;
+  out += `<div class="field"><div class="field__l">Logements <small>${d.logs.length} choisi${d.logs.length > 1 ? 's' : ''} · 6 max</small></div>`;
+  if (b && d.niv !== null) {
+    const nb = b.niv[d.niv];
+    const codes = Array.from({ length: nb }, (_, i) => code(d.niv, i + 1));
+    out += `<div class="chips">${codes.map(cd => `<button class="chip" data-a="pick-log" data-v="${cd}" aria-pressed="${d.logs.includes(cd)}" ${!d.logs.includes(cd) && d.logs.length >= 6 ? 'disabled' : ''}>${cd}</button>`).join('')}</div>`;
+    if (nb <= 6) out += `<button class="link" data-a="all-logs">Tout le niveau (${nb})</button>`;
+    if (PLAN_VARIANT === 'B' && c.plans[d.bat + '|' + d.niv]) out += `<div style="margin-top:10px"><button class="link" data-a="plan" data-v="${h(d.bat)}|${d.niv}">🗺 Voir le plan de ce niveau</button></div>`;
+  } else out += '<span class="muted">Choisissez d\'abord le niveau</span>';
+  out += '</div>';
+  if (PLAN_VARIANT === 'B') out += '<p class="muted" style="font-size:12px">Variante B : le lien « Voir le plan » n\'apparaît que si un plan existe pour ce niveau (ici : Tilleuls Bât A R+1 et R+2).</p>';
+  else out += '<p class="muted" style="font-size:12px">Variante A : pas de plan sur cet écran, les plans sont seulement dans le Registre.</p>';
+  return out;
+}
+function stepEquipe(p, d) {
+  const c = chantier(d.ch);
+  const days = [0, 1, 2, 3, 4, 7].map(k => new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + k));
+  const chefs = PERSONNES.filter(x => x[1] === 'Chef de chantier').map(x => x[0]);
+  const chefsEq = PERSONNES.filter(x => x[1] === "Chef d'équipe").map(x => x[0]);
+  const comps = PERSONNES.filter(x => x[1] === 'Compagnon').map(x => x[0]);
+  const chip = (a, v, on, l) => `<button class="chip" data-a="${a}" data-v="${h(v)}" aria-pressed="${on}">${h(l || v)}</button>`;
+  return `<div class="field"><div class="field__l">Date de l'incorporation</div><div class="chips">${chip('noop', '', true, "Aujourd'hui " + fmtD(AUJ))}</div></div>
+    <div class="field"><div class="field__l">Coulage prévu</div><div class="chips">${days.slice(1).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pick-coul', v, d.coulage === v, jour(dt) + ' ' + fmtD(dt)); }).join('')}</div>
+      ${c.coulage ? `<p class="muted" style="margin:6px 0 0">Prochain coulage connu sur ce chantier : ${pad(c.coulage[0])}/${pad(c.coulage[1])}</p>` : ''}</div>
+    <div class="field"><div class="field__l">Chef de chantier</div><div class="chips">${chefs.map(x => chip('pick-chef', x, d.chef === x)).join('')}</div></div>
+    <div class="field"><div class="field__l">Chef d'équipe <small>facultatif</small></div><div class="chips">${chefsEq.map(x => chip('pick-chefeq', x, d.chefEq === x)).join('')}</div></div>
+    <div class="field"><div class="field__l">Compagnons <small>plusieurs possibles</small></div><div class="chips">${comps.map(x => chip('pick-comp', x, d.comps.includes(x))).join('')}</div></div>`;
+}
+function stepPoints(p, d, n) {
+  const s = SECS[n - 4], done = s.items.filter(([id]) => d.rep[id]).length, ko = s.items.filter(([id]) => d.rep[id] === 'ko').length;
+  let out = s.alerte ? `<div class="alert">⚠ ${h(s.alerte)}</div>` : '';
+  out += `<div class="pt-head"><div class="counter">${done}/${s.items.length} points<small>${h(s.long)}${ko ? ` · <b style="color:var(--ko)">${ko} anomalie${ko > 1 ? 's' : ''}</b>` : ''}</small></div>
+    <button class="btn btn--sm btn--ok" data-a="all-ok" data-v="${n}">✓ Tout fait</button>
+    <button class="qbtn" data-a="guide" data-v="${n}" aria-label="Guide : ${h(s.titre)}">?</button></div>`;
+  out += s.items.map(([id, l]) => {
+    const r = d.rep[id];
+    return `<div class="pt ${r === 'ok' ? 'is-ok' : r === 'ko' ? 'is-ko' : ''}"><div class="pt__l" id="l-${p.id}-${id}">${h(l)}</div>
+      <div class="pt__b" role="group" aria-labelledby="l-${p.id}-${id}">
+        <button class="b-ok" data-a="rep" data-v="${id}|ok" aria-pressed="${r === 'ok'}">✓ Fait</button>
+        <button class="b-ko" data-a="rep" data-v="${id}|ko" aria-pressed="${r === 'ko'}">✗ Anomalie</button></div>
+      ${r === 'ko' ? `<textarea rows="2" data-in="note" data-v="${id}" placeholder="Que se passe-t-il ? (facultatif)" aria-label="Note sur l'anomalie">${h(d.notes[id] || '')}</textarea>` : ''}</div>`;
+  }).join('');
+  return out;
+}
+function stepPhotos(p, d) {
+  if (d.visited < 8) d.visited = 8;
+  return `<p class="lead">Facultatif. 10 photos maximum, réduites automatiquement (environ 300 Ko chacune). Elles partent avec la fiche.</p>
+    <div class="ph-btns">
+      <label class="btn btn--primary">📷 Photo<input type="file" accept="image/*" capture="environment" data-in="photo" ${d.photos.length >= 10 ? 'disabled' : ''}></label>
+      <label class="btn btn--ghost">🖼 Galerie<input type="file" accept="image/*" multiple data-in="photo" ${d.photos.length >= 10 ? 'disabled' : ''}></label>
+    </div>
+    <div class="field__l">Photos jointes <small>${d.photos.length}/10</small></div>
+    ${d.photos.length ? `<div class="ph-grid">${d.photos.map((ph, i) => `<div class="ph"><img src="${ph.src}" alt="Photo ${i + 1}"><span class="ph__kb">${ph.avant} → ${ph.kb} Ko</span><button class="ph__x" data-a="ph-del" data-v="${i}" aria-label="Retirer la photo ${i + 1}">✕</button></div>`).join('')}</div>` : '<p class="empty" style="border:2px dashed var(--line);border-radius:12px">Aucune photo pour l\'instant</p>'}
+    <div class="info" style="margin-top:14px"><b>📸 Photos Alobees toujours obligatoires avant coulage</b>
+      <ul style="margin:6px 0 0;padding-left:18px;font-size:13px">${ALOBEES.map(x => `<li>${h(x)}</li>`).join('')}</ul></div>`;
+}
+function stepEnvoi(p, d) {
+  const c = chantier(d.ch);
+  const total = ALL_ITEMS.length, done = ALL_ITEMS.filter(([id]) => d.rep[id]).length;
+  const kos = ALL_ITEMS.filter(([id]) => d.rep[id] === 'ko');
+  return `<div class="recap"><div class="muted" style="font-weight:700;text-transform:uppercase;font-size:11px">Récapitulatif</div><div class="recap__big">${done}/${total} points ✓ · <span class="${kos.length ? 'recap__ko' : ''}">${kos.length} anomalie${kos.length > 1 ? 's' : ''}</span></div>
+      <div class="muted">${h(c.nom)} · ${h(d.bat)} · ${nivL(d.niv)} · ${d.logs.join(' ')} · coulage ${d.coulage.slice(0, 5)}</div>
+      <div class="muted">${d.photos.length} photo${d.photos.length > 1 ? 's' : ''} · ${h([d.chef, d.chefEq, ...d.comps].filter(Boolean).join(', '))}</div>
+      ${kos.length ? `<div style="margin-top:8px;font-size:13px;color:var(--ko)">${kos.map(([id, l]) => `✗ ${h(l)}`).join('<br>')}</div>` : ''}</div>
+    <div class="field"><div class="field__l">Observations <small>facultatif</small></div><textarea rows="2" data-in="obs" placeholder="Une remarque pour le conducteur ?">${h(d.obs)}</textarea></div>
+    <div class="redbox"><h4>⚠ À LIRE AVANT D'ENVOYER</h4><ul>${RAPPELS.map(r => `<li>${h(r)}</li>`).join('')}</ul>
+      <label class="check"><input type="checkbox" data-a="lu" ${d.lu ? 'checked' : ''}> J'ai tout lu et vérifié</label></div>
+    <div class="send-zone">
+      <button class="btn btn--gold btn--big" data-a="send" ${d.lu ? '' : 'disabled aria-describedby="why-send-' + p.id + '"'}>${d.fixOf ? '↻ RENVOYER AU BUREAU' : '➤ ENVOYER AU BUREAU'}</button>
+      ${d.lu ? '' : `<p class="foot__hint" id="why-send-${p.id}" style="margin:0">Cochez « J'ai tout lu et vérifié » pour envoyer</p>`}
+      <label class="check check--small"><input type="checkbox" data-a="excel" ${d.excel ? 'checked' : ''}><span>Envoyer aussi l'Excel par mail à la facturation<small>Pièce jointe envoyée par le serveur à ${MAIL_FACTU}</small></span></label>
+      <button class="btn btn--ghost btn--block" data-a="xlsx">⬇ Télécharger l'Excel</button>
+    </div>`;
+}
+
+/* ---------- Tableau de bord ---------- */
+function viewTdb(p) {
+  const cs = SRV.chantiers, st = cs.map(statsChantier);
+  const tot = st.reduce((a, s) => a + s.total, 0), val = st.reduce((a, s) => a + s.vert, 0), ctrl = st.reduce((a, s) => a + s.aCtrl, 0);
+  let out = `<div class="kpis">
+    <div class="kpi"><b>${cs.length}</b><span>chantiers</span></div>
+    <div class="kpi"><b>${tot}</b><span>logements</span></div>
+    <div class="kpi"><b>${Math.round(val / tot * 100)} %</b><span>validés</span></div>
+    <div class="kpi ${ctrl ? 'warn' : ''}"><b>${ctrl}</b><span>fiche${ctrl > 1 ? 's' : ''} à contrôler</span></div></div><div class="tdb-grid"><div>`;
+  out += cs.map((c, i) => {
+    const s = st[i], pct = Math.round(s.vert / s.total * 100);
+    const j = Math.round((new Date(2026, c.coulage[1] - 1, c.coulage[0]) - AUJ) / 864e5);
+    const seg = k => `<i class="c-${k}" style="width:${s[k] / s.total * 100}%"></i>`;
+    return `<button class="ch-card" data-a="tdb-ch" data-v="${c.id}"><div class="ch-card__t"><span>${h(c.nom)}</span><span>${pct} %</span></div>
+      <div class="bar" aria-label="${pct} % validés">${['vert', 'bleu', 'rouge', 'jaune'].map(seg).join('')}</div>
+      <div class="ch-card__m"><span>Prochain coulage : <b style="color:${j <= 2 ? 'var(--ko)' : 'var(--navy)'}">${pad(c.coulage[0])}/${pad(c.coulage[1])} (J-${j})</b></span>
+      ${s.ano ? `<span class="pill p-ko">⚠ ${s.ano} anomalie</span>` : ''}${s.aCtrl ? `<span class="pill p-envoyee">${s.aCtrl} à contrôler</span>` : ''}</div></button>`;
+  }).join('');
+  out += '</div><div>';
+  const aCtrl = SRV.fiches.filter(aControler).filter(f => P(p).recues === 'tous' || chantier(f.ch).conducteur === P(p).nom).sort((a, b) => b.id - a.id);
+  out += `<h3>Fiches à contrôler</h3>${aCtrl.length ? `<div class="list">${aCtrl.map(f => rowFiche(p, f, true)).join('')}</div>` : '<p class="empty">Aucune fiche à contrôler 👍</p>'}`;
+  out += `<div style="height:12px"></div><button class="btn btn--ghost btn--block" data-a="export">⬇ Exporter en Excel</button></div></div>`;
+  return out;
+}
+function legend() {
+  return `<div class="legend">${Object.entries(ETATS).map(([k, [l]]) => `<span><i class="sw c-${k}"></i>${l}</span>`).join('')}</div>`;
+}
+function viewTdbChantier(p, c) {
+  const s = statsChantier(c);
+  let out = `<div class="kpis"><div class="kpi"><b>${s.vert}/${s.total}</b><span>logements validés</span></div><div class="kpi ${s.aCtrl ? 'warn' : ''}"><b>${s.aCtrl}</b><span>à contrôler</span></div></div>`;
+  out += legend();
+  out += c.bats.map(b => `<div class="bat"><h4>${h(b.nom)}</h4>${b.niv.map((nb, n) => n).reverse().map(n => `<div class="lvl"><span class="lvl__n">${nivL(n)}</span><div class="lvl__c">${Array.from({ length: b.niv[n] }, (_, i) => {
+    const cd = code(n, i + 1), e = etatLogement(c.id, b.nom, n, cd);
+    return `<button class="cell c-${e}" data-a="cell" data-v="${h(b.nom)}|${n}|${cd}" aria-label="${cd} : ${ETATS[e][0]}">${cd}<i aria-hidden="true">${ETATS[e][1]}</i></button>`;
+  }).join('')}</div></div>`).join('')}</div>`).join('');
+  const fs = SRV.fiches.filter(f => f.ch === c.id).sort((a, b) => b.id - a.id);
+  out += `<h3>Fiches du chantier (${fs.length})</h3><div class="list">${fs.map(f => rowFiche(p, f, true)).join('')}</div>`;
+  return out;
+}
+
+/* ---------- Registre ---------- */
+function peutModifier(p, c) { const r = P(p).registre; return r === 'admin' || (r === 'siens' && c && c.conducteur === P(p).nom); }
+function viewReg(p) {
+  const admin = P(p).registre === 'admin';
+  let out = `<div class="seg-in"><button data-a="reg-seg" data-v="ch" aria-pressed="${p.regSeg === 'ch'}">Chantiers</button><button data-a="reg-seg" data-v="pers" aria-pressed="${p.regSeg === 'pers'}">Personnes</button></div>`;
+  if (p.regSeg === 'ch') {
+    if (!admin) out += '<div class="info">Lecture seule, sauf vos chantiers (modifiables).</div>';
+    out += `<div class="list">${SRV.chantiers.map(c => {
+      const nb = c.bats.reduce((a, b) => a + b.niv.reduce((x, y) => x + y, 0), 0);
+      return `<button class="row-btn" data-a="reg-ch" data-v="${c.id}"><div class="row-btn__main"><strong>${h(c.nom)}</strong><span>${h(c.ville)} · ${c.bats.length} bât. · ${nb} logements · conducteur ${h(c.conducteur)}</span></div>${peutModifier(p, c) ? '<span class="pill p-envoyee">modifiable</span>' : ''}<span class="chev">›</span></button>`;
+    }).join('')}</div>`;
+    if (admin) out += '<div style="height:10px"></div><button class="btn btn--primary btn--block" data-a="toast" data-v="Maquette : création d\'un chantier prévue au lot E">＋ Nouveau chantier</button>';
+  } else {
+    if (!admin) out += '<div class="info">Lecture seule : seul le patron gère les personnes et les comptes.</div>';
+    out += `<div class="list">${PERSONNES.map(([n, f, id], i) => `<div class="person"><span class="avatar" aria-hidden="true" style="display:grid;place-items:center">${initials(n)}</span>
+      <div><strong>${h(n)}</strong><br>${h(f)} · 06 •• •• •• ${pad(10 + i * 7)}<br><span class="muted">Compte : ${h(id)}</span></div>
+      ${admin ? `<button class="btn btn--sm btn--ghost" data-a="toast" data-v="Maquette : nouveau mot de passe envoyé à ${h(n)}">Mot de passe</button>` : ''}</div>`).join('')}</div>`;
+    if (admin) out += '<div style="height:10px"></div><button class="btn btn--primary btn--block" data-a="toast" data-v="Maquette : ajout d\'une personne prévu au lot E">＋ Ajouter une personne</button>';
+  }
+  return out;
+}
+function viewRegChantier(p, c) {
+  const ed = peutModifier(p, c);
+  let out = ed ? '' : '<div class="info">Lecture seule.</div>';
+  out += `<h3>Infos</h3><div class="card"><dl class="kv"><dt>Adresse</dt><dd>${h(c.adresse)}</dd><dt>Client</dt><dd>${h(c.client)}</dd><dt>Dates</dt><dd>${h(c.dates)}</dd><dt>Conducteur</dt><dd>${h(c.conducteur)}</dd><dt>Chef de chantier</dt><dd>${h(c.chef)}</dd></dl></div>`;
+  out += `<h3>Structure</h3>${c.bats.map((b, bi) => `<div class="bat"><h4>${h(b.nom)}</h4>${b.niv.map((nb, n) => `<div class="struct-row"><span>${nivL(n)} · <span class="muted">${nb ? code(n, 1) + ' → ' + code(n, nb) : 'aucun'}</span></span>
+      ${ed ? `<span class="stepper"><button data-a="nb" data-v="${c.id}|${bi}|${n}|-1" aria-label="Un logement de moins">−</button><b>${nb}</b><button data-a="nb" data-v="${c.id}|${bi}|${n}|1" aria-label="Un logement de plus">+</button></span>` : `<b>${nb} logements</b>`}</div>`).join('')}
+      ${ed ? `<button class="link" data-a="add-niv" data-v="${c.id}|${bi}">＋ Ajouter un niveau</button>` : ''}</div>`).join('')}
+    ${ed ? `<button class="link" data-a="add-bat" data-v="${c.id}">＋ Ajouter un bâtiment</button>` : ''}`;
+  out += `<h3>Plans par niveau</h3><div class="card">${c.bats.flatMap(b => b.niv.map((_, n) => {
+    const k = b.nom + '|' + n, ind = c.plans[k];
+    return `<div class="struct-row"><span>${h(b.nom)} · ${nivL(n)}</span>${ind ? `<button class="btn btn--sm btn--ghost" data-a="plan-reg" data-v="${h(k)}">🗺 Plan indice ${ind}</button>` : (ed ? `<button class="btn btn--sm btn--ghost" data-a="add-plan" data-v="${c.id}|${h(k)}">＋ PDF / photo</button>` : '<span class="muted">pas de plan</span>')}</div>`;
+  })).join('')}</div>`;
+  out += `<h3>Équipe affectée</h3><div class="chips">${c.equipe.map(x => `<span class="chip" style="display:inline-flex;align-items:center">${h(x)}</span>`).join('')}</div>`;
+  if (ed) out += `<h3>Importer la structure</h3><p class="lead">Depuis la liste des lots, un descriptif ou un tableau du client. L'appli fait une proposition, vous vérifiez, puis vous enregistrez.</p>
+    <div class="ph-btns"><button class="btn btn--ghost" data-a="import" data-v="${c.id}|xlsx">📊 Excel / CSV</button><button class="btn btn--ghost" data-a="import" data-v="${c.id}|pdf">📄 PDF</button></div>`;
+  return out;
+}
+function viewImport(p, c, s) {
+  const isPdf = s.type === 'pdf';
+  if (!s.prop) {
+    return `<div class="card" style="text-align:center"><div style="font-size:40px">${isPdf ? '📄' : '📊'}</div>
+      <p><b>${isPdf ? 'Liste_des_lots_EXEMPLE.pdf' : 'Structure_EXEMPLE.xlsx'}</b></p>
+      <p class="muted">${isPdf ? "Lecture du texte du PDF, puis repérage de « Bâtiment / Niveau / Lot ou Logement ». Gratuit, sur l'appareil." : 'Lecture des colonnes Bâtiment / Niveau / Logement.'}</p>
+      <button class="btn btn--primary btn--block" data-a="import-read">Lire le fichier (exemple)</button></div>
+      ${isPdf ? '<div class="info" style="margin-top:12px">PDF scanné ou photo de plan : lecture par intelligence artificielle côté serveur (option, quelques centimes par document, à décider plus tard).</div>' : ''}`;
+  }
+  return `<div class="info">Proposition à vérifier : corrigez si besoin, puis enregistrez. Rien n'est enregistré avant.</div>
+    <table class="tbl"><thead><tr><th>Bâtiment</th><th>Niveau</th><th>Logements</th><th></th></tr></thead><tbody>
+    ${s.prop.map((r, i) => `<tr class="${r.doute ? 'doubt' : ''}"><td>${h(r.bat)}</td><td>${nivL(r.niv)}</td><td><span class="stepper"><button data-a="prop-nb" data-v="${i}|-1" aria-label="moins">−</button><b>${r.nb}</b><button data-a="prop-nb" data-v="${i}|1" aria-label="plus">+</button></span></td><td>${r.doute ? `<button class="btn btn--sm btn--ghost" data-a="prop-ok" data-v="${i}">⚠ Confirmer</button>` : '✓'}</td></tr>`).join('')}
+    </tbody></table>
+    ${s.prop.some(r => r.doute) ? `<p class="foot__hint" style="margin-top:8px">1 ligne à vérifier : « ${isPdf ? 'Lot 3B - duplex ?' : 'cellule vide'} » lu dans le fichier. Corrigez le nombre ou confirmez.</p>` : ''}
+    <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="import-save" ${s.prop.some(r => r.doute) ? 'disabled' : ''}>Enregistrer</button></div>`;
+}
+
+/* ---------- Connexion ---------- */
+function viewLogin(p) {
+  return `<div class="main"><div class="login"><img src="logo.png" alt="Euro Sanichauff">
+    <h3 style="text-align:center;text-transform:none;font-size:18px">Fiches chantier</h3>
+    <label>Identifiant<input class="inp" value="${h(PERSONNES.find(x => x[0] === P(p).nom)?.[2] || '')}" autocomplete="off"></label>
+    <label>Mot de passe<input class="inp" type="password" value="maquette" autocomplete="off"></label>
+    <label class="check check--small" style="flex-direction:row"><input type="checkbox" checked> Rester connecté sur ce téléphone</label>
+    <button class="btn btn--primary btn--big" data-a="login">Se connecter</button>
+    <p class="muted" style="text-align:center">Mot de passe oublié ? Demandez au bureau.</p></div></div>`;
+}
+
+/* ---------- Feuilles (bas d'écran) ---------- */
+function viewSheet(p) {
+  const s = p.sheet, x = '<button class="x" data-a="sheet-x" aria-label="Fermer">✕</button>';
+  if (s.t === 'guide') {
+    const sec = SECS[s.n - 4];
+    return `<div class="sheet__h"><strong>Guide : ${h(sec.long)}</strong>${x}</div><div class="guide">
+      <h5 class="g-ok">✓ À faire</h5><ul>${sec.guide.faire.map(t => `<li>${h(t)}</li>`).join('')}</ul>
+      <h5 class="g-ko">⚠ Attention</h5><ul>${sec.guide.attention.map(t => `<li>${h(t)}</li>`).join('')}</ul></div>`;
+  }
+  if (s.t === 'plan') {
+    const [bat, n] = s.k.split('|'), c = chantier(s.ch), nb = c.bats.find(b => b.nom === bat).niv[+n], sel = s.sel || [];
+    const w = 340, cols = Math.min(nb, 3), rows = Math.ceil(nb / cols), cw = (w - 40) / cols, rh = 70;
+    let boxes = '';
+    for (let i = 0; i < nb; i++) {
+      const cd = code(+n, i + 1), on = sel.includes(cd), cx = 20 + (i % cols) * cw, cy = 34 + Math.floor(i / cols) * rh;
+      boxes += `<rect x="${cx}" y="${cy}" width="${cw - 6}" height="${rh - 8}" rx="4" fill="${on ? '#5CC1D2' : '#fff'}" stroke="#27214E" stroke-width="1.5"/><text x="${cx + (cw - 6) / 2}" y="${cy + rh / 2}" text-anchor="middle" font-size="14" font-weight="700" fill="#27214E">${cd}</text>`;
+    }
+    const H = 34 + rows * rh + 20;
+    return `<div class="sheet__h"><strong>Plan ${h(bat)} · ${nivL(+n)} · indice ${c.plans[s.k]}</strong>${x}</div>
+      <div class="plan"><svg viewBox="0 0 ${w} ${H}" role="img" aria-label="Plan schématique du niveau"><rect x="10" y="24" width="${w - 20}" height="${H - 34}" fill="none" stroke="#27214E" stroke-width="3"/><text x="14" y="16" font-size="11" fill="#5F5E75">Maquette : le vrai plan (PDF ou image) s'affichera ici, zoomable</text>${boxes}</svg></div>
+      ${sel.length ? `<p class="muted">En bleu : les logements choisis (${sel.join(', ')}).</p>` : ''}`;
+  }
+  if (s.t === 'valider') {
+    const f = fiche(s.id), abs = P(p).valide === 'absence';
+    return `<div class="sheet__h"><strong>Valider ${f.num} ?</strong>${x}</div>
+      ${abs ? '<div class="info">Vous validez <b>à la place du conducteur absent</b>. Votre nom apparaîtra comme valideur.</div>' : ''}
+      <p>La fiche sera <b>verrouillée</b> : plus aucune modification possible. ${f.auteur} sera prévenu.</p>
+      ${nbKo(f) ? `<div class="alert">⚠ ${nbKo(f)} anomalie signalée sur cette fiche. Vérifiez qu'elle est réglée avant d'autoriser le coulage.</div>` : ''}
+      <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}">✓ Valider</button></div>`;
+  }
+  if (s.t === 'corriger') {
+    const motifs = ['Photo manquante', 'Anomalie à corriger', 'Mauvais logement ou niveau', 'Point mal renseigné'];
+    return `<div class="sheet__h"><strong>Renvoyer à corriger</strong>${x}</div>
+      <p class="muted">Le compagnon reçoit une notification avec le motif.</p>
+      <div class="chips" style="margin-bottom:10px">${motifs.map(m => `<button class="chip" data-a="motif" data-v="${h(m)}" aria-pressed="${s.motif === m}">${h(m)}</button>`).join('')}</div>
+      <textarea rows="2" data-in="motif-txt" placeholder="Précision (facultatif)">${h(s.txt || '')}</textarea>
+      <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ko" data-a="corriger-ok" data-v="${s.id}" ${s.motif ? '' : 'disabled'}>↩ Renvoyer</button></div>`;
+  }
+  if (s.t === 'cell') {
+    const c = chantier(s.ch), fs = SRV.fiches.filter(f => f.ch === s.ch && f.bat === s.bat && f.niv === s.n && f.logs.includes(s.code)).sort((a, b) => b.id - a.id);
+    const e = etatLogement(s.ch, s.bat, s.n, s.code);
+    return `<div class="sheet__h"><strong>Logement ${s.code} · ${h(s.bat)} ${nivL(s.n)}</strong>${x}</div>
+      <p><span class="sw c-${e}" style="vertical-align:middle"></span> ${ETATS[e][0]} · ${h(c.nom)}</p>
+      ${fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, true)).join('')}</div>` : `<p class="empty">${e === 'jaune' ? 'Fiche en cours de remplissage sur un téléphone.' : 'Aucune fiche pour ce logement.'}</p>`}`;
+  }
+  if (s.t === 'me') {
+    const pr = P(p);
+    return `<div class="sheet__h"><strong>${h(pr.nom)}</strong>${x}</div><p class="muted">${h(pr.role)}</p>
+      <p style="font-size:13px">Onglets visibles avec ce profil : <b>${pr.tabs.map(t => ({ inc: 'Incorporation', tdb: 'Tableau de bord', reg: 'Registre' })[t]).join(', ')}</b></p>
+      <button class="btn btn--ghost btn--block" data-a="logout">Se déconnecter</button>`;
+  }
+  return '';
+}
+
+/* ============================ actions ============================ */
+function act(p, a, v, ev) {
+  const d = DRAFTS[p.profil];
+  switch (a) {
+    case 'net':
+      p.online = !p.online;
+      if (p.online) SRV.fiches.filter(f => f.statut === 'attente' && f.auteur === P(p).nom).forEach(f => { log(f.auteur, 'Serveur', `📶 Réseau revenu : envoi automatique de ${f.num}`); transmettre(f, f._fix); });
+      else log(P(p).nom, '—', '✈ Téléphone hors réseau (le remplissage continue)');
+      break;
+    case 'tab': setTab(p, v); break;
+    case 'seg': p.seg = v; break;
+    case 'back': back(p); break;
+    case 'home': p.scr = { n: 'home' }; p.hist = []; p.seg = 'mes'; break;
+    case 'me': p.sheet = { t: 'me' }; break;
+    case 'logout': p.loggedOut = true; p.sheet = null; break;
+    case 'login': p.loggedOut = false; break;
+    case 'sheet-x': p.sheet = null; break;
+    case 'toast': toast(p, v); break;
+    case 'xlsx': toast(p, 'Maquette : le vrai fichier Excel sera généré au lot B'); break;
+    case 'export': toast(p, 'Maquette : export Excel du tableau de bord au lot D'); break;
+    case 'notif': {
+      const id = p.notif.ficheId; p.notif = null;
+      if (p.scr.n === 'wizard') { toast(p, 'Fiche ouverte après votre saisie'); break; }
+      const f = fiche(id); ouvrirFiche(p, f); setTab(p, 'inc'); go(p, { n: 'fiche', id }); break;
+    }
+    /* incorporation */
+    case 'new': DRAFTS[p.profil] = newDraft(p); p.scr = { n: 'wizard' }; break;
+    case 'resume': p.scr = { n: 'wizard' }; break;
+    case 'discard': DRAFTS[p.profil] = null; toast(p, 'Brouillon abandonné'); break;
+    case 'quit': p.scr = { n: 'home' }; p.hist = []; toast(p, 'Brouillon gardé sur le téléphone'); break;
+    case 'open': { const f = fiche(+v); ouvrirFiche(p, f); go(p, { n: 'fiche', id: f.id }); break; }
+    case 'valider': p.sheet = { t: 'valider', id: +v }; break;
+    case 'valider-ok': {
+      const f = fiche(+v), pr = P(p);
+      f.statut = 'validee'; f.valideur = pr.valide === 'absence' ? pr.nom + ' (conducteur absent)' : pr.nom;
+      f.histo.push(['Validée par ' + f.valideur, fmtD(AUJ) + ' ' + now()]); f.vu = { [p.profil]: 1, chef: 1 };
+      p.sheet = null;
+      log(pr.nom, 'Serveur', `✓ ${f.num} validée et verrouillée`, 't-ok');
+      setTimeout(() => {
+        log('Serveur', f.auteur, `🔔 « Votre fiche ${f.num} a été validée »`, 't-ok');
+        if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' validée ✓', `${chantier(f.ch).nom} · ${lieu(f)}`, f.id);
+        notify(['facturation'], 'Fiche validée ' + f.num, chantier(f.ch).nom, f.id);
+        renderAll();
+      }, 600);
+      break;
+    }
+    case 'corriger': p.sheet = { t: 'corriger', id: +v, motif: null, txt: '' }; break;
+    case 'motif': p.sheet.motif = v; break;
+    case 'corriger-ok': {
+      const f = fiche(+v), pr = P(p), s = p.sheet;
+      f.statut = 'corriger'; f.motif = s.motif + (s.txt ? ' : ' + s.txt : '');
+      f.histo.push([`À corriger (${pr.nom})`, fmtD(AUJ) + ' ' + now()]);
+      p.sheet = null;
+      log(pr.nom, f.auteur, `↩ ${f.num} renvoyée à corriger : ${f.motif}`, 't-ko');
+      if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' à corriger', f.motif, f.id);
+      break;
+    }
+    case 'reprendre': {
+      const f = fiche(+v);
+      DRAFTS[p.profil] = Object.assign(newDraft(p), JSON.parse(JSON.stringify({ ch: f.ch, bat: f.bat, niv: f.niv, logs: f.logs, coulage: f.coulage, chef: f.chef, chefEq: f.chefEq, comps: f.comps, rep: f.rep, notes: f.notes, obs: f.obs })), { photos: f.photos.slice(), step: 7, visited: 8, fixOf: f.id });
+      p.hist = []; p.scr = { n: 'wizard' };
+      break;
+    }
+    case 'mail-factu': { const f = fiche(+v); log(P(p).nom, 'Serveur', `Demande d'envoi de l'Excel ${f.num}`); setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 500); toast(p, "L'Excel part à la facturation"); break; }
+    /* assistant */
+    case 'step': d.step = +v; break;
+    case 'prev': d.step = Math.max(1, d.step - 1); break;
+    case 'next': d.step = Math.min(8, d.step + 1); d.visited = Math.max(d.visited, d.step); break;
+    case 'pick-ch': if (d.ch !== v) Object.assign(d, { ch: v, bat: null, niv: null, logs: [] }); { const c = chantier(v); if (!d.chef) d.chef = c.chef; if (c.bats.length === 1) d.bat = c.bats[0].nom; } break;
+    case 'pick-bat': if (d.bat !== v) Object.assign(d, { bat: v, niv: null, logs: [] }); break;
+    case 'pick-niv': if (d.niv !== +v) Object.assign(d, { niv: +v, logs: [] }); break;
+    case 'pick-log': d.logs = d.logs.includes(v) ? d.logs.filter(x => x !== v) : [...d.logs, v].sort(); break;
+    case 'all-logs': { const b = chantier(d.ch).bats.find(x => x.nom === d.bat); d.logs = Array.from({ length: b.niv[d.niv] }, (_, i) => code(d.niv, i + 1)); break; }
+    case 'plan': p.sheet = { t: 'plan', ch: d.ch, k: v, sel: d.logs }; break;
+    case 'pick-coul': d.coulage = v; break;
+    case 'pick-chef': d.chef = v; break;
+    case 'pick-chefeq': d.chefEq = d.chefEq === v ? null : v; break;
+    case 'pick-comp': d.comps = d.comps.includes(v) ? d.comps.filter(x => x !== v) : [...d.comps, v]; break;
+    case 'rep': { const [id, r] = v.split('|'); d.rep[id] = d.rep[id] === r ? undefined : r; if (!d.rep[id]) delete d.rep[id]; break; }
+    case 'all-ok': SECS[+v - 4].items.forEach(([id]) => { if (!d.rep[id]) d.rep[id] = 'ok'; }); break;
+    case 'guide': p.sheet = { t: 'guide', n: +v }; break;
+    case 'ph-del': d.photos.splice(+v, 1); break;
+    case 'lu': d.lu = ev.target.checked; break;
+    case 'excel': d.excel = ev.target.checked; break;
+    case 'send': {
+      const pr = P(p);
+      let f;
+      if (d.fixOf) {
+        f = fiche(d.fixOf);
+        Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, motif: null, coulage: d.coulage, logs: d.logs });
+      } else {
+        f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom, auteurProfil: p.profil,
+          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, vu: {}, histo: [], valideur: null, motif: null };
+        SRV.fiches.push(f);
+      }
+      const fix = !!d.fixOf;
+      DRAFTS[p.profil] = null; p.hist = []; p.scr = { n: 'sent', id: f.id };
+      if (p.online) transmettre(f, fix);
+      else { f.statut = 'attente'; f._fix = fix; log(pr.nom, '—', `📵 ${f.num} prête mais pas de réseau : gardée sur le téléphone`); }
+      break;
+    }
+    /* tableau de bord */
+    case 'tdb-ch': go(p, { n: 'tdb-ch', id: v }); break;
+    case 'cell': { const [bat, n, cd] = v.split('|'); p.sheet = { t: 'cell', ch: p.scr.id, bat, n: +n, code: cd }; break; }
+    /* registre */
+    case 'reg-seg': p.regSeg = v; break;
+    case 'reg-ch': go(p, { n: 'reg-ch', id: v }); break;
+    case 'nb': { const [cid, bi, n, k] = v.split('|'); const b = chantier(cid).bats[+bi]; b.niv[+n] = Math.max(0, Math.min(9, b.niv[+n] + +k)); break; }
+    case 'add-niv': { const [cid, bi] = v.split('|'); const b = chantier(cid).bats[+bi]; if (b.niv.length < 10) b.niv.push(4); break; }
+    case 'add-bat': { const c = chantier(v); c.bats.push({ nom: 'Bât ' + String.fromCharCode(65 + c.bats.length), niv: [3, 3] }); break; }
+    case 'add-plan': { const [cid, ...k] = v.split('|'); chantier(cid).plans[k.join('|')] = 'A'; toast(p, 'Maquette : plan ajouté (indice A)'); break; }
+    case 'plan-reg': p.sheet = { t: 'plan', ch: p.scr.id, k: v }; break;
+    case 'import': { const [cid, type] = v.split('|'); go(p, { n: 'reg-import', id: cid, type }); break; }
+    case 'import-read': {
+      const c = chantier(p.scr.id);
+      p.scr.prop = c.bats.flatMap(b => b.niv.map((nb, n) => ({ bat: b.nom, niv: n, nb, doute: false })));
+      if (p.scr.prop.length) { const last = p.scr.prop[p.scr.prop.length - 1]; last.nb += 1; last.doute = true; }
+      break;
+    }
+    case 'prop-nb': { const [i, k] = v.split('|'); const r = p.scr.prop[+i]; r.nb = Math.max(0, Math.min(9, r.nb + +k)); r.doute = false; break; }
+    case 'prop-ok': p.scr.prop[+v].doute = false; break;
+    case 'import-save': {
+      const c = chantier(p.scr.id);
+      p.scr.prop.forEach(r => { const b = c.bats.find(x => x.nom === r.bat); if (b) b.niv[r.niv] = r.nb; });
+      back(p); toast(p, 'Structure enregistrée'); break;
+    }
+    case 'noop': break;
+    default: return;
+  }
+  renderAll();
+}
+function onInput(p, el) {
+  const d = DRAFTS[p.profil];
+  if (el.dataset.in === 'note') d.notes[el.dataset.v] = el.value;
+  else if (el.dataset.in === 'obs') d.obs = el.value;
+  else if (el.dataset.in === 'motif-txt' && p.sheet) p.sheet.txt = el.value;
+}
+async function onPhotos(p, input) {
+  const d = DRAFTS[p.profil];
+  const files = [...input.files].slice(0, 10 - d.photos.length);
+  for (const file of files) {
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+      cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+      let q = .8, blob;
+      do { blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); q -= .1; } while (blob.size > 320 * 1024 && q > .3);
+      const avant = file.size > 1048576 ? (file.size / 1048576).toFixed(1).replace('.', ',') + ' Mo' : Math.round(file.size / 1024) + ' Ko';
+      d.photos.push({ src: URL.createObjectURL(blob), kb: Math.round(blob.size / 1024), avant });
+    } catch (e) { toast(p, 'Photo illisible : ' + file.name); }
+  }
+  renderAll();
+}
+
+/* ============================ panneau journal ============================ */
+function renderJournal(de, vers) {
+  const j = document.getElementById('journal');
+  j.innerHTML = SRV.log.length
+    ? SRV.log.map(e => `<li class="${e.type}"><time>${e.t}</time><b>${h(e.de)}</b> → <b>${h(e.vers)}</b><br>${h(e.txt)}</li>`).join('')
+    : '<li class="journal__empty" style="border:0;background:none">Aucun échange pour l\'instant. Remplissez et envoyez une fiche…</li>';
+  ['fn-c', 'fn-s', 'fn-p', 'fn-f', 'fa-cs', 'fa-sp'].forEach(id => document.getElementById(id).classList.remove('on'));
+  if (!de) return;
+  const on = (...ids) => ids.forEach(id => document.getElementById(id).classList.add('on'));
+  if (vers === 'Serveur') on('fn-c', 'fa-cs', 'fn-s');
+  else if (vers === 'Facturation') on('fn-s', 'fn-f');
+  else if (de === 'Serveur' && /Conducteur/.test(vers)) on('fn-s', 'fa-sp', 'fn-p');
+  else if (de === 'Serveur') on('fn-s', 'fa-cs', 'fn-c');
+  else if (vers !== '—') on('fn-p', 'fa-sp', 'fn-s', 'fa-cs', 'fn-c');
+}
+
+/* ============================ montage ============================ */
+const PROFIL_OPTS = p => Object.entries(PROFILS).map(([k, v]) => `<option value="${k}" ${p.profil === k ? 'selected' : ''}>${v.role} (${v.nom})</option>`).join('');
+function buildStage() {
+  const st = document.getElementById('stage');
+  st.innerHTML = PHONES.slice(0, MODE).map((p, i) => `<div class="stage__col"><label class="stage__lbl">${MODE === 2 ? (i === 0 ? 'Téléphone 1' : 'Téléphone 2') : 'Profil'}
+      <select data-phone="${i}" aria-label="Profil de l'appareil ${i + 1}">${PROFIL_OPTS(p)}</select></label>
+      <div class="phone ${FORMAT === 'pc' && MODE === 1 ? 'pc' : ''}" id="phone-${i}" data-i="${i}"></div></div>`).join('');
+  document.getElementById('ctl-format-wrap').hidden = MODE === 2;
+  renderAll();
+}
+function reset() {
+  seed();
+  PHONES = [newPhone('compagnon'), newPhone('conducteur')];
+  PHONES.forEach((p, i) => (p.id = i));
+  buildStage(); renderJournal();
+}
+document.getElementById('stage').addEventListener('click', ev => {
+  const ph = ev.target.closest('.phone'); if (!ph) return;
+  const p = PHONES[+ph.dataset.i];
+  const t = ev.target.closest('[data-a]');
+  if (!t) return;
+  if (t.classList.contains('scrim') && ev.target.closest('[data-stop]')) return;
+  if (t.disabled) return;
+  act(p, t.dataset.a, t.dataset.v, ev);
+});
+document.getElementById('stage').addEventListener('input', ev => {
+  const ph = ev.target.closest('.phone'); if (!ph || !ev.target.dataset.in || ev.target.type === 'file') return;
+  onInput(PHONES[+ph.dataset.i], ev.target);
+});
+document.getElementById('stage').addEventListener('change', ev => {
+  if (ev.target.matches('select[data-phone]')) {
+    const p = PHONES[+ev.target.dataset.phone];
+    Object.assign(p, newPhone(ev.target.value), { id: p.id, online: p.online });
+    renderAll(); return;
+  }
+  const ph = ev.target.closest('.phone');
+  if (ph && ev.target.dataset.in === 'photo') onPhotos(PHONES[+ph.dataset.i], ev.target);
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  PHONES.forEach(p => { if (p.sheet) { p.sheet = null; } }); renderAll();
+});
+const segCtl = (id, attr, fn) => document.getElementById(id).addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#' + id + ' button').forEach(x => x.setAttribute('aria-pressed', x === b));
+  fn(b.dataset[attr]);
+});
+segCtl('ctl-mode', 'mode', v => { MODE = +v; buildStage(); });
+segCtl('ctl-format', 'format', v => { FORMAT = v; if (v === 'pc' && PHONES[0].profil === 'compagnon') { Object.assign(PHONES[0], newPhone('patron'), { id: 0 }); } buildStage(); });
+segCtl('ctl-plan', 'plan', v => { PLAN_VARIANT = v; renderAll(); });
+document.getElementById('ctl-reset').addEventListener('click', reset);
+reset();
+</script>
+</body>
+</html>
