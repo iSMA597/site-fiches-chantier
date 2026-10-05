@@ -78,6 +78,8 @@ button { cursor: pointer; }
 .app { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 .sbar { height: 30px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-size: 12px; font-weight: 700; background: #fff; }
 .phone.pc .sbar { padding: 0 12px; }
+.phone.tab { width: min(820px, calc(100vw - 32px)); height: 900px; border-width: 14px; border-radius: 34px; }
+.phone.tab .sbar { padding: 0 16px; }
 .net { border: 0; border-radius: 99px; padding: 2px 9px; font-size: 11px; font-weight: 700; background: var(--ok-bg); color: var(--ok); }
 .net.off { background: var(--ko-bg); color: var(--ko); }
 .top { flex: none; display: flex; align-items: center; gap: 10px; padding: 6px 12px 8px; background: #fff; border-bottom: 3px solid var(--navy); }
@@ -155,6 +157,12 @@ textarea, .inp { width: 100%; border: 2px solid var(--line); border-radius: 12px
 .steps button[aria-current="step"] { border-color: var(--navy); box-shadow: 0 0 0 2px var(--navy); color: var(--navy); }
 .steps button.done[aria-current="step"] { color: #fff; }
 .steps button[disabled] { opacity: .45; cursor: not-allowed; }
+.steps button span { display: none; }
+@container app (min-width: 700px) {
+  .steps { flex-wrap: wrap; }
+  .steps button { width: auto; padding: 0 10px; }
+  .steps button span { display: inline; margin-left: 4px; font-weight: 400; }
+}
 
 /* points Documents / Matériel / Contrôles */
 .pt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -273,8 +281,8 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
 /* feuilles du bas, notifications */
 .scrim { position: absolute; inset: 0; background: rgba(21, 19, 43, .45); display: flex; align-items: flex-end; z-index: 20; animation: fade .15s; }
 .sheet { background: #fff; width: 100%; max-height: 86%; overflow: auto; border-radius: 20px 20px 0 0; padding: 14px 16px 20px; animation: up .2s ease-out; }
-.phone.pc .scrim { align-items: center; justify-content: center; }
-.phone.pc .sheet { width: 560px; border-radius: 18px; }
+.phone.pc .scrim, .phone.tab .scrim { align-items: center; justify-content: center; }
+.phone.pc .sheet, .phone.tab .sheet { width: 560px; border-radius: 18px; }
 .sheet__h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .sheet__h strong { color: var(--navy); font-size: 16px; }
 .x { width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--bg); font-weight: 700; font-size: 16px; }
@@ -283,7 +291,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
 .g-ok { color: var(--ok); }
 .g-ko { color: var(--ko); }
 .notif { position: absolute; top: 36px; left: 8px; right: 8px; z-index: 30; background: rgba(255, 255, 255, .97); border-radius: 16px; box-shadow: 0 10px 30px rgba(21, 19, 43, .3); padding: 10px 12px; display: flex; gap: 10px; align-items: center; text-align: left; border: 0; width: auto; animation: drop .25s ease-out; }
-.phone.pc .notif { left: auto; width: 360px; }
+.phone.pc .notif, .phone.tab .notif { left: auto; width: 360px; }
 .notif img { width: 36px; height: 36px; object-fit: contain; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
 .notif div { flex: 1; font-size: 13px; }
 .notif small { display: block; color: var(--grey); font-size: 11px; }
@@ -325,6 +333,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
       <div class="ctl" id="ctl-format-wrap"><span>Format</span>
         <div class="seg" id="ctl-format">
           <button data-format="tel" aria-pressed="true">Téléphone</button>
+          <button data-format="tab" aria-pressed="false">Tablette</button>
           <button data-format="pc" aria-pressed="false">PC</button>
         </div>
       </div>
@@ -355,6 +364,10 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Excel facturation</b> : part seulement après la validation du conducteur.</li>
         <li>✓ <b>Note facultative</b> sous une anomalie.</li>
         <li>✓ <b>Envoi avec anomalie</b> autorisé, signalé en rouge.</li>
+        <li>✓ <b>Circulation</b> : une fiche faite par le chef (ou par n'importe qui) arrive chez le <b>conducteur</b> du chantier et chez la direction.</li>
+        <li>✓ <b>Équipe</b> : les compagnons et le chef d'équipe cochés à l'étape 3 reçoivent la fiche, puis sont prévenus quand elle est validée ou à corriger.</li>
+        <li>✓ <b>Plan</b> visible depuis la fiche reçue, logements surlignés.</li>
+        <li>✓ <b>Appareils</b> : iPhone, Android, tablettes (iPad et Android) et PC, avec le même lien. L'appli marche hors réseau et envoie dès que le réseau revient.</li>
       </ol>
       <h2 style="margin-top:14px">Reste à trancher</h2>
       <ol class="todo">
@@ -405,7 +418,7 @@ const PROFILS = {
   facturation: { nom: 'Nadia F.',   role: 'Facturation',            tabs: ['inc'],               nouvelle: false, recues: 'validees' },
 };
 const PERSONNES = [
-  ['Direction', 'Patron (admin)', 'direction'], ['Sophie D.', 'Conducteur de travaux', 'sophie.d'], ['Patrick V.', 'Conducteur de travaux', 'patrick.v'],
+  ['Direction', 'Patron (admin)', 'direction'], ['Sophie D.', 'Conducteur de travaux', 'sophie.d'], ['Antoine C.', 'Chef de chantier', 'antoine.c'],
   ['Julien M.', 'Chef de chantier', 'julien.m'], ['Thomas L.', "Chef d'équipe", 'thomas.l'], ['Karim B.', 'Compagnon', 'karim.b'],
   ['Mehdi R.', 'Compagnon', 'mehdi.r'], ['Lucas P.', 'Compagnon', 'lucas.p'], ['Nadia F.', 'Facturation', 'nadia.f'],
 ];
@@ -422,14 +435,14 @@ function seed() {
         bats: [{ nom: 'Bât A', niv: [3, 4, 4, 4] }, { nom: 'Bât B', niv: [2, 3, 3, 4] }], plans: { 'Bât A|1': 'C', 'Bât A|2': 'C' }, equipe: ['Julien M.', 'Thomas L.', 'Karim B.', 'Mehdi R.'] },
       { id: 'jar', nom: 'Les Jardins du Parc', ville: 'Armentières', adresse: '3 allée du Parc, 59280 Armentières', client: 'Bailleur EXEMPLE', dates: '10/2026 → 09/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [15, 10],
         bats: [{ nom: 'Bât 1', niv: [4, 4, 4, 4] }], plans: {}, equipe: ['Julien M.', 'Karim B.', 'Lucas P.'] },
-      { id: 'clo', nom: 'Le Clos Saint-Jean', ville: 'Lomme', adresse: '8 rue Saint-Jean, 59160 Lomme', client: 'Promoteur EXEMPLE 2', dates: '06/2026 → 03/2027', conducteur: 'Patrick V.', chef: 'Julien M.', coulage: [22, 10],
+      { id: 'clo', nom: 'Le Clos Saint-Jean', ville: 'Lomme', adresse: '8 rue Saint-Jean, 59160 Lomme', client: 'Promoteur EXEMPLE 2', dates: '06/2026 → 03/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [22, 10],
         bats: [{ nom: 'Bât A', niv: [5, 5, 5] }], plans: { 'Bât A|0': 'B' }, equipe: ['Mehdi R.', 'Lucas P.'] },
     ],
     fiches: [],
     log: [],
   };
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
-    id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, auteurProfil: auteur === 'Karim B.' ? 'compagnon' : null,
+    id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, 
     date: '02/10/2026', coulage: '07/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: [auteur],
     rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false, sign: SIGN_DEMO, signeLe: null,
     vu: {}, histo: [['Envoyée', '02/10 16:40']], valideur: null, motif: null,
@@ -438,7 +451,7 @@ function seed() {
   mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
   mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
   mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
-  mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, facturation: 1 }, valideur: 'Patrick V.', coulage: '03/10/2026' });
+  mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', coulage: '03/10/2026' });
   mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
   mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Karim B.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
   mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Mehdi R.', [], { histo: [['Envoyée', '05/10 09:58']] });
@@ -481,7 +494,7 @@ function recuesPour(profil) {
     switch (pr.recues) {
       case 'tous': return true;
       case 'conducteur': return c.conducteur === nom;
-      case 'chef': return c.chef === nom;
+      case 'chef': return c.chef === nom || f.chef === nom;
       case 'validees': return f.statut === 'validee';
       default: return false;
     }
@@ -492,10 +505,16 @@ function badgeFor(profil) {
   if (!pr.recues) return 0;
   return recuesPour(profil).filter(f => !f.vu[profil] && (pr.recues === 'validees' ? f.statut === 'validee' : aControler(f))).length;
 }
+/* « Mes fiches » = celles que j'ai remplies + celles où je suis dans l'équipe (chef d'équipe, compagnons) */
+const equipe = f => [f.chefEq, ...f.comps].filter(Boolean);
 function mesFiches(profil) {
   const nom = PROFILS[profil].nom;
-  return SRV.fiches.filter(f => f.auteur === nom).sort((a, b) => b.id - a.id);
+  return SRV.fiches.filter(f => f.auteur === nom || (f.statut !== 'attente' && equipe(f).includes(nom))).sort((a, b) => b.id - a.id);
 }
+/* profils de la maquette qui portent l'un de ces noms */
+const profilsDe = noms => Object.keys(PROFILS).filter(k => noms.includes(PROFILS[k].nom));
+/* toutes les personnes concernées par une fiche : auteur, chef de chantier, équipe */
+const concernes = f => profilsDe([f.auteur, f.chef, chantier(f.ch).chef, ...equipe(f)]);
 /* Couleur d'un logement (§ 6) : dérivée des fiches + brouillons en cours */
 function etatLogement(chId, bat, niv, c) {
   const fs = SRV.fiches.filter(f => f.ch === chId && f.bat === bat && f.niv === niv && f.logs.includes(c)).sort((a, b) => b.id - a.id);
@@ -531,11 +550,17 @@ function notify(profils, title, body, ficheId) {
     }
   });
 }
+/* Bureau : le conducteur du chantier + la direction + le chef de chantier (celui du chantier et celui choisi sur la fiche) */
 function destinataires(f) {
-  const c = chantier(f.ch), out = ['patron'];
-  if (c.conducteur === PROFILS.conducteur.nom) out.push('conducteur');
-  if (c.chef === PROFILS.chef.nom) out.push('chef');
-  return out;
+  const c = chantier(f.ch);
+  return profilsDe(['Direction', c.conducteur, c.chef, f.chef]).filter(k => PROFILS[k].nom !== f.auteur);
+}
+/* texte lisible des destinataires, affiché avant l'envoi */
+function destinatairesTexte(d, auteur) {
+  const c = chantier(d.ch);
+  const bureau = [`${c.conducteur} (conducteur)`, 'Direction', ...[...new Set([c.chef, d.chef].filter(Boolean))].map(x => x + ' (chef de chantier)')].filter(x => !x.startsWith(auteur));
+  const eq = [d.chefEq, ...d.comps].filter(x => x && x !== auteur);
+  return { bureau, eq };
 }
 function transmettre(f, correction) {
   f.statut = 'envoyee'; f.vu = {};
@@ -545,7 +570,13 @@ function transmettre(f, correction) {
   setTimeout(() => {
     const c = chantier(f.ch);
     log('Serveur', 'Conducteur · Patron · Chef', `🔔 Notification « Nouvelle fiche : ${c.nom}, ${f.bat} ${nivL(f.niv)} » + badge`, 't-notif');
-    notify(destinataires(f), 'Nouvelle fiche ' + f.num, `${c.nom} · ${lieu(f)}${nbKo(f) ? ' · ⚠ ' + nbKo(f) + ' anomalie' : ''}`, f.id);
+    const bureau = destinataires(f);
+    notify(bureau, 'Nouvelle fiche ' + f.num, `${c.nom} · ${lieu(f)}${nbKo(f) ? ' · ⚠ ' + nbKo(f) + ' anomalie' : ''}`, f.id);
+    const eq = profilsDe(equipe(f)).filter(k => !bureau.includes(k) && PROFILS[k].nom !== f.auteur);
+    if (eq.length) {
+      log('Serveur', 'Équipe', `🔔 « Vous êtes dans l'équipe de la fiche ${f.num} » → ${equipe(f).filter(n => n !== f.auteur).join(', ')}`, 't-notif');
+      notify(eq, 'Fiche ' + f.num + ' : vous êtes dans l\'équipe', `${c.nom} · ${lieu(f)} · par ${f.auteur}`, f.id);
+    }
     renderAll();
   }, 700);
 }
@@ -556,7 +587,7 @@ function ouvrirFiche(p, f) {
     f.statut = 'recue';
     f.histo.push(['Reçue par ' + P(p).nom, fmtD(AUJ) + ' ' + now()]);
     log('Serveur', f.auteur, `${f.num} reçue et ouverte par ${P(p).nom}`);
-    if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' reçue', `Ouverte par ${P(p).nom}`, f.id);
+    notify(profilsDe([f.auteur]), 'Fiche ' + f.num + ' reçue', `Ouverte par ${P(p).nom}`, f.id);
   }
 }
 
@@ -569,7 +600,7 @@ function setTab(p, t) { p.tab = t; p.scr = { n: 'home' }; p.hist = []; p.sheet =
 /* ============================ brouillon / étapes ============================ */
 function newDraft(p) {
   const pr = P(p);
-  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: [pr.nom], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, sign: null, step: 1, visited: 1, fixOf: null };
+  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: p.profil === 'compagnon' ? [pr.nom] : [], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, sign: null, step: 1, visited: 1, fixOf: null };
 }
 function stepOk(d, n) {
   switch (n) {
@@ -690,7 +721,7 @@ function viewIncHome(p) {
   if (seg === 'mes') {
     const fs = mesFiches(p.profil);
     out += pr.recues ? '' : '<h3>Mes fiches</h3>';
-    out += fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, false)).join('')}</div>` : '<p class="empty">Aucune fiche envoyée pour l\'instant.</p>';
+    out += fs.length ? `<div class="list">${fs.map(f => rowFiche(p, f, f.auteur !== pr.nom)).join('')}</div>` : '<p class="empty">Aucune fiche envoyée pour l\'instant.</p>';
   } else {
     const fs = recuesPour(p.profil);
     if (pr.recues === 'validees') out += `<h3>Fiches validées${b ? `<span class="badge badge--in">${b}</span>` : ''}</h3><p class="lead">Seules les fiches validées par le conducteur arrivent ici.</p>`;
@@ -727,7 +758,8 @@ function viewFiche(p, f) {
     <dt>Chantier</dt><dd>${h(c.nom)}</dd><dt>Emplacement</dt><dd>${h(lieu(f))}</dd>
     <dt>Incorporation</dt><dd>${h(f.date)}</dd><dt>Coulage prévu</dt><dd>${h(f.coulage)}</dd>
     <dt>Chef de chantier</dt><dd>${h(f.chef)}</dd><dt>Équipe</dt><dd>${h([f.chefEq, ...f.comps].filter(Boolean).join(', '))}</dd>
-    <dt>Rempli par</dt><dd>${h(f.auteur)}</dd></dl></div>`;
+    <dt>Rempli par</dt><dd>${h(f.auteur)}</dd></dl>
+    ${c.plans[f.bat + '|' + f.niv] ? `<button class="btn btn--ghost btn--block" style="margin-top:10px" data-a="plan-fiche" data-v="${f.id}">🗺 Voir le plan de ce niveau</button>` : ''}</div>`;
   if (kos.length) out += `<h3 style="color:var(--ko)">Anomalies signalées</h3><div class="alert" style="font-weight:400">${kos.map(([id, l]) => `<div style="margin-bottom:4px"><b>✗ ${h(l)}</b>${f.notes[id] ? `<br><i>« ${h(f.notes[id])} »</i>` : ''}</div>`).join('')}</div>`;
   out += '<h3>Réponses</h3>' + SECS.map(s => {
     const n = s.items.length, ok = s.items.filter(([id]) => f.rep[id] === 'ok').length;
@@ -779,7 +811,7 @@ function viewWizard(p) {
   const d = DRAFTS[p.profil], n = d.step;
   const squares = STEPS.map((l, i) => {
     const k = i + 1, reach = canReach(d, k) && (k <= d.visited || stepOk(d, k - 1));
-    return `<button data-a="step" data-v="${k}" class="${stepOk(d, k) ? 'done' : ''}" ${k === n ? 'aria-current="step"' : ''} ${reach ? '' : 'disabled'} aria-label="Étape ${k} : ${l}${stepOk(d, k) ? ' (faite)' : ''}" title="${l}">${k}</button>`;
+    return `<button data-a="step" data-v="${k}" class="${stepOk(d, k) ? 'done' : ''}" ${k === n ? 'aria-current="step"' : ''} ${reach ? '' : 'disabled'} aria-label="Étape ${k} : ${l}${stepOk(d, k) ? ' (faite)' : ''}" title="${l}">${k}<span>${l}</span></button>`;
   }).join('');
   const top = `<div class="top"><button class="top__back" data-a="quit" aria-label="Quitter (le brouillon est gardé)">✕</button>
     <div class="top__t"><strong>${d.fixOf ? 'Correction ' + fiche(d.fixOf).num : 'Nouvelle fiche'}</strong><span>Étape ${n}/8 · ${STEPS[n - 1]}</span></div>
@@ -867,6 +899,7 @@ function stepEnvoi(p, d) {
       <div class="muted">${d.photos.length} photo${d.photos.length > 1 ? 's' : ''} · ${h([d.chef, d.chefEq, ...d.comps].filter(Boolean).join(', '))}</div>
       ${kos.length ? `<div style="margin-top:8px;font-size:13px;color:var(--ko)">${kos.map(([id, l]) => `✗ ${h(l)}`).join('<br>')}</div>` : ''}</div>
     <div class="field"><div class="field__l">Observations <small>facultatif</small></div><textarea rows="2" data-in="obs" placeholder="Une remarque pour le conducteur ?">${h(d.obs)}</textarea></div>
+    ${(() => { const t = destinatairesTexte(d, P(p).nom); return `<div class="info"><b>La fiche sera envoyée à :</b><br>🏢 ${t.bureau.map(h).join(' · ')}${t.eq.length ? `<br>👷 Équipe (reçoit la fiche et le plan) : ${t.eq.map(h).join(' · ')}` : ''}</div>`; })()}
     <div class="redbox"><h4>⚠ À LIRE AVANT D'ENVOYER</h4><ul>${RAPPELS.map(r => `<li>${h(r)}</li>`).join('')}</ul>
       <label class="check"><input type="checkbox" data-a="lu" ${d.lu ? 'checked' : ''}> J'ai tout lu et vérifié</label></div>
     <div class="field"><div class="field__l">Signature <small>avec le doigt</small></div>
@@ -1084,8 +1117,8 @@ function act(p, a, v, ev) {
       if (envoiExcel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx (fiche validée) envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 1200);
       log(pr.nom, 'Serveur', `✓ ${f.num} validée et verrouillée`, 't-ok');
       setTimeout(() => {
-        log('Serveur', f.auteur, `🔔 « Votre fiche ${f.num} a été validée »`, 't-ok');
-        if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' validée ✓', `${chantier(f.ch).nom} · ${lieu(f)}`, f.id);
+        log('Serveur', [...new Set([f.auteur, ...equipe(f)])].join(', '), `🔔 « Votre fiche ${f.num} a été validée »`, 't-ok');
+        notify(concernes(f).filter(k => k !== p.profil), 'Fiche ' + f.num + ' validée ✓', `${chantier(f.ch).nom} · ${lieu(f)}`, f.id);
         notify(['facturation'], 'Fiche validée ' + f.num, chantier(f.ch).nom, f.id);
         renderAll();
       }, 600);
@@ -1098,8 +1131,8 @@ function act(p, a, v, ev) {
       f.statut = 'corriger'; f.motif = s.motif + (s.txt ? ' : ' + s.txt : '');
       f.histo.push([`À corriger (${pr.nom})`, fmtD(AUJ) + ' ' + now()]);
       p.sheet = null;
-      log(pr.nom, f.auteur, `↩ ${f.num} renvoyée à corriger : ${f.motif}`, 't-ko');
-      if (f.auteurProfil) notify([f.auteurProfil], 'Fiche ' + f.num + ' à corriger', f.motif, f.id);
+      log(pr.nom, [...new Set([f.auteur, ...equipe(f)])].join(', '), `↩ ${f.num} renvoyée à corriger : ${f.motif}`, 't-ko');
+      notify(concernes(f).filter(k => k !== p.profil), 'Fiche ' + f.num + ' à corriger', f.motif, f.id);
       break;
     }
     case 'reprendre': {
@@ -1136,7 +1169,7 @@ function act(p, a, v, ev) {
         f = fiche(d.fixOf);
         Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, motif: null, coulage: d.coulage, logs: d.logs, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60) });
       } else {
-        f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom, auteurProfil: p.profil,
+        f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom,
           date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
         SRV.fiches.push(f);
       }
@@ -1156,6 +1189,7 @@ function act(p, a, v, ev) {
     case 'add-niv': { const [cid, bi] = v.split('|'); const b = chantier(cid).bats[+bi]; if (b.niv.length < 10) b.niv.push(4); break; }
     case 'add-bat': { const c = chantier(v); c.bats.push({ nom: 'Bât ' + String.fromCharCode(65 + c.bats.length), niv: [3, 3] }); break; }
     case 'add-plan': { const [cid, ...k] = v.split('|'); chantier(cid).plans[k.join('|')] = 'A'; toast(p, 'Maquette : plan ajouté (indice A)'); break; }
+    case 'plan-fiche': { const f = fiche(+v); p.sheet = { t: 'plan', ch: f.ch, k: f.bat + '|' + f.niv, sel: f.logs }; break; }
     case 'plan-reg': p.sheet = { t: 'plan', ch: p.scr.id, k: v }; break;
     case 'import': { const [cid, type] = v.split('|'); go(p, { n: 'reg-import', id: cid, type }); break; }
     case 'import-read': {
@@ -1222,7 +1256,7 @@ function buildStage() {
   const st = document.getElementById('stage');
   st.innerHTML = PHONES.slice(0, MODE).map((p, i) => `<div class="stage__col"><label class="stage__lbl">${MODE === 2 ? (i === 0 ? 'Téléphone 1' : 'Téléphone 2') : 'Profil'}
       <select data-phone="${i}" aria-label="Profil de l'appareil ${i + 1}">${PROFIL_OPTS(p)}</select></label>
-      <div class="phone ${FORMAT === 'pc' && MODE === 1 ? 'pc' : ''}" id="phone-${i}" data-i="${i}"></div></div>`).join('');
+      <div class="phone ${MODE === 1 && FORMAT !== 'tel' ? FORMAT : ''}" id="phone-${i}" data-i="${i}"></div></div>`).join('');
   document.getElementById('ctl-format-wrap').hidden = MODE === 2;
   renderAll();
 }
