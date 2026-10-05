@@ -193,6 +193,10 @@ textarea, .inp { width: 100%; border: 2px solid var(--line); border-radius: 12px
 .check input { width: 26px; height: 26px; accent-color: var(--navy); flex: none; }
 .redbox .check { background: var(--ko-bg); border-radius: 10px; padding: 8px 10px; color: var(--ko); }
 .redbox .check input { accent-color: var(--ko); }
+.sign { position: relative; height: 140px; background: #fff; border: 2px dashed var(--line); border-radius: 12px; }
+.sign canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.sign__ph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--off); font-weight: 700; pointer-events: none; }
+.sign-img { display: block; max-width: 220px; height: 70px; object-fit: contain; background: #fff; border-bottom: 1px solid var(--line); }
 .send-zone { display: flex; flex-direction: column; gap: 10px; }
 .check--small { font-weight: 400; font-size: 13.5px; }
 .check--small small { display: block; color: var(--grey); font-size: 12px; }
@@ -324,12 +328,6 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
           <button data-format="pc" aria-pressed="false">PC</button>
         </div>
       </div>
-      <div class="ctl"><span>Plans depuis l'Emplacement</span>
-        <div class="seg" id="ctl-plan">
-          <button data-plan="A" aria-pressed="false">A : Registre seulement</button>
-          <button data-plan="B" aria-pressed="true">B : lien « Voir le plan »</button>
-        </div>
-      </div>
       <div class="ctl"><span>&nbsp;</span><button class="reset" id="ctl-reset">↺ Tout remettre à zéro</button></div>
     </div>
     <div class="stage" id="stage"></div>
@@ -348,15 +346,19 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
       <ol class="journal" id="journal" aria-live="polite"></ol>
     </section>
     <section class="panel">
-      <h2>Points à valider par Ismael</h2>
+      <h2>Décisions d'Ismael (06/10)</h2>
       <ol class="todo">
-        <li><b>Plans</b> : variante A ou B ? (bouton en haut, puis étape 2 « Emplacement »)</li>
-        <li><b>Tableau de bord</b> : seulement patron + conducteur, le chef de chantier ne l'a pas. D'accord ?</li>
-        <li><b>Photos Alobees et cadre « Validation » de la fiche papier</b> : remplacés par le rappel de l'étape 7, la case unique de l'étape 8 et la validation du conducteur. D'accord ?</li>
-        <li><b>Signature</b> : remplacée par le compte connecté (nom + date + heure). D'accord ?</li>
-        <li><b>Excel facturation</b> : il part dès l'envoi si la case est cochée. Ou seulement après la validation du conducteur ?</li>
-        <li><b>Anomalie</b> : une note facultative peut être écrite sous le point. D'accord ?</li>
-        <li><b>Envoi avec anomalie</b> : autorisé, l'anomalie est signalée en rouge au conducteur. D'accord ?</li>
+        <li>✓ <b>Plans</b> : lien « Voir le plan » sur l'Emplacement, seulement si un plan existe (variante B).</li>
+        <li>✓ <b>Tableau de bord</b> : patron + conducteur seulement.</li>
+        <li>✓ <b>Alobees + cadre Validation</b> : rappel étape 7, case unique étape 8, validation du conducteur.</li>
+        <li>✓ <b>Signature au doigt</b> maintenue à l'étape 8, en plus du nom, de la date et de l'heure.</li>
+        <li>✓ <b>Excel facturation</b> : part seulement après la validation du conducteur.</li>
+        <li>✓ <b>Note facultative</b> sous une anomalie.</li>
+        <li>✓ <b>Envoi avec anomalie</b> autorisé, signalé en rouge.</li>
+      </ol>
+      <h2 style="margin-top:14px">Reste à trancher</h2>
+      <ol class="todo">
+        <li><b>Le conducteur doit-il aussi signer</b> quand il valide ? (aujourd'hui : son nom + date + heure, sans dessin)</li>
       </ol>
     </section>
   </aside>
@@ -368,7 +370,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
    DONNÉES FICTIVES (maquette). Les textes des points viennent du gabarit
    outils/fiche_gabarit.py (contenu.json v1), qui reste la source de vérité.
    ===================================================================== */
-const AUJ = new Date(2026, 9, 5);
+const AUJ = new Date(2026, 9, 6);
 const SECS = [
   { n: 4, titre: 'Documents', long: 'Documents à avoir avant de commencer', alerte: "INTERDIT : incorporer à partir d'un ancien plan ou d'une cote non vérifiée.",
     items: [['d1', "Plan d'exécution à jour et dernier indice vérifié"], ['d2', 'Plan architecte / cloisons à jour'], ['d3', 'Plan de réservations / incorporations'], ['d4', 'Repérage des logements et gaines techniques'], ['d5', 'Modifications chantier connues et validées']],
@@ -408,7 +410,9 @@ const PERSONNES = [
   ['Mehdi R.', 'Compagnon', 'mehdi.r'], ['Lucas P.', 'Compagnon', 'lucas.p'], ['Nadia F.', 'Facturation', 'nadia.f'],
 ];
 
-let SRV, DRAFTS, PHONES, MODE = 1, FORMAT = 'tel', PLAN_VARIANT = 'B', CLOCK, SEQ;
+let SRV, DRAFTS, PHONES, MODE = 1, FORMAT = 'tel', CLOCK, SEQ;
+/* signature d'exemple pour les fiches déjà en base */
+const SIGN_DEMO = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 90"><path d="M15 60c20-40 35-45 40-20s10 30 25 0 20-30 30 5 15 25 35-10 25-20 40 10 30 15 60-5" fill="none" stroke="#27214E" stroke-width="3" stroke-linecap="round"/></svg>');
 
 function seed() {
   CLOCK = 10 * 60 + 12; SEQ = 146;
@@ -427,9 +431,10 @@ function seed() {
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
     id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, auteurProfil: auteur === 'Karim B.' ? 'compagnon' : null,
     date: '02/10/2026', coulage: '07/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: [auteur],
-    rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false,
+    rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false, sign: SIGN_DEMO, signeLe: null,
     vu: {}, histo: [['Envoyée', '02/10 16:40']], valideur: null, motif: null,
   }, extra || {}));
+  SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
   mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Karim B.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
   mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
   mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Mehdi R.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
@@ -541,7 +546,6 @@ function transmettre(f, correction) {
     const c = chantier(f.ch);
     log('Serveur', 'Conducteur · Patron · Chef', `🔔 Notification « Nouvelle fiche : ${c.nom}, ${f.bat} ${nivL(f.niv)} » + badge`, 't-notif');
     notify(destinataires(f), 'Nouvelle fiche ' + f.num, `${c.nom} · ${lieu(f)}${nbKo(f) ? ' · ⚠ ' + nbKo(f) + ' anomalie' : ''}`, f.id);
-    if (f.excel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 600);
     renderAll();
   }, 700);
 }
@@ -565,7 +569,7 @@ function setTab(p, t) { p.tab = t; p.scr = { n: 'home' }; p.hist = []; p.sheet =
 /* ============================ brouillon / étapes ============================ */
 function newDraft(p) {
   const pr = P(p);
-  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: [pr.nom], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, step: 1, visited: 1, fixOf: null };
+  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: [pr.nom], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, sign: null, step: 1, visited: 1, fixOf: null };
 }
 function stepOk(d, n) {
   switch (n) {
@@ -613,9 +617,26 @@ function renderPhone(p, el) {
   const mainNew = el.querySelector('.main');
   if (mainNew && p.scroll[key] != null && key === p._key) mainNew.scrollTop = p.scroll[key];
   p._key = key;
+  setupSign(p, el);
   // garde le focus clavier sur le même bouton après le re-rendu
   const target = (focusSel && el.querySelector(focusSel)) || (focusSel && el.querySelector('.sheet .x'));
   if (target) target.focus({ preventScroll: true });
+}
+/* Signature au doigt : le dessin est gardé en image dans le brouillon (survit aux re-rendus) */
+function setupSign(p, el) {
+  const cv = el.querySelector('canvas[data-sign]'), d = DRAFTS[p.profil];
+  if (!cv || !d) return;
+  const r = cv.getBoundingClientRect(), k = window.devicePixelRatio || 1;
+  cv.width = r.width * k; cv.height = r.height * k;
+  const g = cv.getContext('2d');
+  g.scale(k, k); g.lineWidth = 2.5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#27214E';
+  if (d.sign) { const im = new Image(); im.onload = () => g.drawImage(im, 0, 0, r.width, r.height); im.src = d.sign; }
+  let drawing = false, moved = false;
+  const pt = e => { const b = cv.getBoundingClientRect(); return [e.clientX - b.left, e.clientY - b.top]; };
+  cv.addEventListener('pointerdown', e => { drawing = true; moved = false; cv.setPointerCapture(e.pointerId); const [x, y] = pt(e); g.beginPath(); g.moveTo(x, y); el.querySelector('.sign__ph')?.remove(); });
+  cv.addEventListener('pointermove', e => { if (!drawing) return; const [x, y] = pt(e); g.lineTo(x, y); g.stroke(); moved = true; });
+  const end = () => { if (!drawing) return; drawing = false; if (moved) { d.sign = cv.toDataURL('image/png'); renderAll(); } };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
 }
 function topbar(p, title, sub, withBack) {
   return `<div class="top">
@@ -715,6 +736,7 @@ function viewFiche(p, f) {
   const nph = f.photos.length || f.nbPhotosDemo;
   out += `<h3>Photos (${nph})</h3>` + (nph ? `<div class="ph-grid">${f.photos.length ? f.photos.map(ph => `<div class="ph"><img src="${ph.src}" alt="Photo jointe"></div>`).join('') : Array.from({ length: nph }, (_, i) => `<div class="ph">photo ${i + 1}<br>(exemple)</div>`).join('')}</div>` : '<p class="muted">Aucune photo jointe.</p>');
   if (f.obs) out += `<h3>Observations</h3><div class="card">${h(f.obs)}</div>`;
+  if (f.sign) out += `<h3>Signature</h3><div class="card"><img class="sign-img" src="${f.sign}" alt="Signature de ${h(f.auteur)}"><span class="muted">${h(f.auteur)} · le ${h(f.signeLe)}</span></div>`;
   out += `<h3>Historique</h3><div class="card" style="font-size:13px">${f.histo.map(([l, t]) => `<div>• ${h(t)} : ${h(l)}</div>`).join('')}</div>`;
 
   // actions selon le profil
@@ -743,7 +765,7 @@ function viewSent(p) {
     <h3 style="font-size:17px;text-transform:none">${st === 'attente' ? 'Fiche prête, en attente de réseau' : 'Fiche ' + f.num + ' envoyée au bureau'}</h3>
     <p class="lead">${st === 'attente' ? 'Elle est gardée sur le téléphone et partira toute seule dès que le réseau revient.' : 'Le conducteur et le patron sont prévenus. Vous serez notifié quand elle sera validée.'}</p></div>
     ${viewFicheTrackOnly(f)}
-    ${f.excel ? `<div class="info">✉ L'Excel part en pièce jointe à ${MAIL_FACTU} (envoyé par le serveur).</div>` : ''}
+    ${f.excel ? `<div class="info">✉ L'Excel partira en pièce jointe à ${MAIL_FACTU} dès que le conducteur aura validé la fiche.</div>` : ''}
     <button class="btn btn--primary btn--block" data-a="home">Retour à mes fiches</button>`;
 }
 function viewFicheTrackOnly(f) {
@@ -788,11 +810,10 @@ function stepEmplacement(p, d) {
     const codes = Array.from({ length: nb }, (_, i) => code(d.niv, i + 1));
     out += `<div class="chips">${codes.map(cd => `<button class="chip" data-a="pick-log" data-v="${cd}" aria-pressed="${d.logs.includes(cd)}" ${!d.logs.includes(cd) && d.logs.length >= 6 ? 'disabled' : ''}>${cd}</button>`).join('')}</div>`;
     if (nb <= 6) out += `<button class="link" data-a="all-logs">Tout le niveau (${nb})</button>`;
-    if (PLAN_VARIANT === 'B' && c.plans[d.bat + '|' + d.niv]) out += `<div style="margin-top:10px"><button class="link" data-a="plan" data-v="${h(d.bat)}|${d.niv}">🗺 Voir le plan de ce niveau</button></div>`;
+    if (c.plans[d.bat + '|' + d.niv]) out += `<div style="margin-top:10px"><button class="link" data-a="plan" data-v="${h(d.bat)}|${d.niv}">🗺 Voir le plan de ce niveau</button></div>`;
   } else out += '<span class="muted">Choisissez d\'abord le niveau</span>';
   out += '</div>';
-  if (PLAN_VARIANT === 'B') out += '<p class="muted" style="font-size:12px">Variante B : le lien « Voir le plan » n\'apparaît que si un plan existe pour ce niveau (ici : Tilleuls Bât A R+1 et R+2).</p>';
-  else out += '<p class="muted" style="font-size:12px">Variante A : pas de plan sur cet écran, les plans sont seulement dans le Registre.</p>';
+  out += '<p class="muted" style="font-size:12px">Le lien « Voir le plan » n\'apparaît que si un plan existe pour ce niveau dans le Registre (dans la maquette : Tilleuls Bât A R+1 et R+2).</p>';
   return out;
 }
 function stepEquipe(p, d) {
@@ -848,10 +869,13 @@ function stepEnvoi(p, d) {
     <div class="field"><div class="field__l">Observations <small>facultatif</small></div><textarea rows="2" data-in="obs" placeholder="Une remarque pour le conducteur ?">${h(d.obs)}</textarea></div>
     <div class="redbox"><h4>⚠ À LIRE AVANT D'ENVOYER</h4><ul>${RAPPELS.map(r => `<li>${h(r)}</li>`).join('')}</ul>
       <label class="check"><input type="checkbox" data-a="lu" ${d.lu ? 'checked' : ''}> J'ai tout lu et vérifié</label></div>
+    <div class="field"><div class="field__l">Signature <small>avec le doigt</small></div>
+      <div class="sign"><canvas data-sign aria-label="Zone de signature : dessinez avec le doigt ou la souris"></canvas>${d.sign ? '' : '<span class="sign__ph">Signez ici</span>'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span class="muted" style="font-size:12px">${h(P(p).nom)} · ${fmtD(AUJ)} à l'envoi</span>${d.sign ? '<button class="link" data-a="sign-clear">Effacer</button>' : ''}</div></div>
     <div class="send-zone">
-      <button class="btn btn--gold btn--big" data-a="send" ${d.lu ? '' : 'disabled aria-describedby="why-send-' + p.id + '"'}>${d.fixOf ? '↻ RENVOYER AU BUREAU' : '➤ ENVOYER AU BUREAU'}</button>
-      ${d.lu ? '' : `<p class="foot__hint" id="why-send-${p.id}" style="margin:0">Cochez « J'ai tout lu et vérifié » pour envoyer</p>`}
-      <label class="check check--small"><input type="checkbox" data-a="excel" ${d.excel ? 'checked' : ''}><span>Envoyer aussi l'Excel par mail à la facturation<small>Pièce jointe envoyée par le serveur à ${MAIL_FACTU}</small></span></label>
+      <button class="btn btn--gold btn--big" data-a="send" ${d.lu && d.sign ? '' : 'disabled aria-describedby="why-send-' + p.id + '"'}>${d.fixOf ? '↻ RENVOYER AU BUREAU' : '➤ ENVOYER AU BUREAU'}</button>
+      ${d.lu && d.sign ? '' : `<p class="foot__hint" id="why-send-${p.id}" style="margin:0">${!d.lu ? "Cochez « J'ai tout lu et vérifié »" : ''}${!d.lu && !d.sign ? ' et signez' : (!d.sign ? 'Signez' : '')} pour envoyer</p>`}
+      <label class="check check--small"><input type="checkbox" data-a="excel" ${d.excel ? 'checked' : ''}><span>Envoyer l'Excel à la facturation une fois la fiche validée<small>Le serveur l'envoie en pièce jointe à ${MAIL_FACTU} dès que le conducteur valide</small></span></label>
       <button class="btn btn--ghost btn--block" data-a="xlsx">⬇ Télécharger l'Excel</button>
     </div>`;
 }
@@ -990,6 +1014,7 @@ function viewSheet(p) {
       ${abs ? '<div class="info">Vous validez <b>à la place du conducteur absent</b>. Votre nom apparaîtra comme valideur.</div>' : ''}
       <p>La fiche sera <b>verrouillée</b> : plus aucune modification possible. ${f.auteur} sera prévenu.</p>
       ${nbKo(f) ? `<div class="alert">⚠ ${nbKo(f)} anomalie signalée sur cette fiche. Vérifiez qu'elle est réglée avant d'autoriser le coulage.</div>` : ''}
+      <label class="check check--small" style="margin-bottom:10px"><input type="checkbox" data-a="sheet-excel" ${s.excel ? 'checked' : ''}><span>Envoyer l'Excel à la facturation<small>${f.excel ? 'Demandé par ' + h(f.auteur) + ' à l\'envoi' : 'Non demandé à l\'envoi'} · pièce jointe à ${MAIL_FACTU}</small></span></label>
       <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}">✓ Valider</button></div>`;
   }
   if (s.t === 'corriger') {
@@ -1047,12 +1072,16 @@ function act(p, a, v, ev) {
     case 'discard': DRAFTS[p.profil] = null; toast(p, 'Brouillon abandonné'); break;
     case 'quit': p.scr = { n: 'home' }; p.hist = []; toast(p, 'Brouillon gardé sur le téléphone'); break;
     case 'open': { const f = fiche(+v); ouvrirFiche(p, f); go(p, { n: 'fiche', id: f.id }); break; }
-    case 'valider': p.sheet = { t: 'valider', id: +v }; break;
+    case 'valider': p.sheet = { t: 'valider', id: +v, excel: fiche(+v).excel }; break;
+    case 'sheet-excel': p.sheet.excel = ev.target.checked; break;
+    case 'sign-clear': d.sign = null; break;
     case 'valider-ok': {
       const f = fiche(+v), pr = P(p);
       f.statut = 'validee'; f.valideur = pr.valide === 'absence' ? pr.nom + ' (conducteur absent)' : pr.nom;
       f.histo.push(['Validée par ' + f.valideur, fmtD(AUJ) + ' ' + now()]); f.vu = { [p.profil]: 1, chef: 1 };
+      const envoiExcel = p.sheet.excel;
       p.sheet = null;
+      if (envoiExcel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx (fiche validée) envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 1200);
       log(pr.nom, 'Serveur', `✓ ${f.num} validée et verrouillée`, 't-ok');
       setTimeout(() => {
         log('Serveur', f.auteur, `🔔 « Votre fiche ${f.num} a été validée »`, 't-ok');
@@ -1105,10 +1134,10 @@ function act(p, a, v, ev) {
       let f;
       if (d.fixOf) {
         f = fiche(d.fixOf);
-        Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, motif: null, coulage: d.coulage, logs: d.logs });
+        Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, motif: null, coulage: d.coulage, logs: d.logs, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60) });
       } else {
         f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom, auteurProfil: p.profil,
-          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, vu: {}, histo: [], valideur: null, motif: null };
+          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
         SRV.fiches.push(f);
       }
       const fix = !!d.fixOf;
@@ -1236,7 +1265,6 @@ const segCtl = (id, attr, fn) => document.getElementById(id).addEventListener('c
 });
 segCtl('ctl-mode', 'mode', v => { MODE = +v; buildStage(); });
 segCtl('ctl-format', 'format', v => { FORMAT = v; if (v === 'pc' && PHONES[0].profil === 'compagnon') { Object.assign(PHONES[0], newPhone('patron'), { id: 0 }); } buildStage(); });
-segCtl('ctl-plan', 'plan', v => { PLAN_VARIANT = v; renderAll(); });
 document.getElementById('ctl-reset').addEventListener('click', reset);
 reset();
 </script>
