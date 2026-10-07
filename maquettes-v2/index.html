@@ -318,6 +318,8 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
 .fixbar.ok { background: var(--ok); }
 .fixbar button { border: 0; border-radius: 8px; background: #fff; color: var(--navy); font-weight: 700; padding: 5px 10px; font-size: 12.5px; }
 .pick { display: flex; width: 100%; text-align: left; gap: 8px; align-items: center; border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+.pick__txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pick__sous { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
 .pick[aria-pressed="true"] { border-color: var(--ko); background: var(--ko-bg); color: var(--ko); font-weight: 700; }
 .prog { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--royal); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
 .rappel { width: 100%; text-align: left; background: #FFF8E6; border: 1px solid #F3D58A; border-left: 4px solid var(--gold); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: block; font-size: 13px; }
@@ -400,13 +402,18 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Incorporations programmées</b> : le jour J, la fiche est pré-remplie.</li>
         <li>✓ <b>Comptes</b> : le bureau crée la personne, donne un <b>code à 6 chiffres</b> (48 h, une seule fois). L'employé choisit lui-même son mot de passe, puis Face ID / empreinte (passkeys Supabase, en bêta). <i>Essai : Registre › Personnes, ou se déconnecter.</i></li>
         <li>✓ <b>Plans</b> : par niveau <b>et</b> par logement (touchez un logement sur le plan).</li>
-        <li>✓ <b>Pas d'IA</b> : PDF texte et Excel lus gratuitement. Plans et chantiers récupérés depuis <b>Alobees en lecture seule</b>. Photos vers Alobees : option, si l'API le permet.</li>
+        <li>✓ <b>Pas d'IA</b> : PDF texte et Excel lus gratuitement.</li>
+        <li>✓ <b>Alobees, testé avec la vraie clé</b> : 74 chantiers, arborescence complète des documents, PDF téléchargeables. Dans l'appli : dossiers Devis / Clients <b>masqués</b>, bâtiment / niveau / indice <b>lus dans le nom du fichier</b>, alerte quand un <b>nouvel indice</b> arrive. <i>Essai : patron › Registre › Tilleuls.</i></li>
+        <li>✓ <b>Tâches « Incorporation » d'Alobees</b> reprises dans les incorporations programmées (à confirmer par le test C). <i>Essai : chef › « Tâches Alobees ».</i></li>
+        <li>✓ <b>Fiche sans programmation</b> toujours possible. À la réception, <b>comparaison</b> avec ce qui était prévu (date, logements restants, indice du plan). <i>Essai : conducteur › F-0143.</i></li>
+        <li>✓ <b>Preuve dans Alobees</b> : à la validation, l'Excel de la fiche peut être déposé dans le dossier « Fiches incorporation » du chantier. C'est la seule écriture autorisée vers Alobees.</li>
       </ol>
       <h2 style="margin-top:14px">Reste à trancher</h2>
       <ol class="todo">
         <li><b>Profil Facturation</b> : le supprimer ? L'Excel des fiches validées arrive déjà par mail.</li>
         <li><b>Le conducteur doit-il aussi signer</b> quand il valide ? (aujourd'hui : son nom + date + heure, sans dessin)</li>
-        <li><b>Test de la clé Alobees</b> : quelles rubriques sont lisibles (plans, documents, photos) ?</li>
+        <li><b>Écriture dans Alobees</b> (dépôt de l'Excel, photos) : à confirmer avec Alobees, rien n'a été testé en écriture.</li>
+        <li><b>Test C</b> : tâches et planning Alobees (dates, équipe).</li>
       </ol>
     </section>
   </aside>
@@ -476,13 +483,22 @@ function seed() {
     fiches: [],
     log: [],
     /* incorporations programmées (rappel la veille, fiche pré-remplie le jour J) */
-    planning: [{ id: 1, ch: 'jar', bat: 'Bât 1', niv: 2, logs: ['021', '022', '023', '024'], date: '07/10/2026', coulage: '15/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: ['Karim B.', 'Lucas P.'] }],
+    planning: [{ id: 0, source: 'alobees', ch: 'til', bat: 'Bât B', niv: 2, logs: ['021', '022', '023'], date: '05/10/2026', coulage: '07/10/2026', chef: 'Antoine C.', chefEq: null, comps: ['Mehdi R.', 'Lucas P.'] },
+      { id: 1, ch: 'jar', bat: 'Bât 1', niv: 2, logs: ['021', '022', '023', '024'], date: '07/10/2026', coulage: '15/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: ['Karim B.', 'Lucas P.'] }],
     rappels: [],
     personnes: PERSONNES.map(x => x.slice()),
     /* état des comptes : actif, bio (Face ID / empreinte) ou { code } en attente d'activation */
     comptes: Object.assign(Object.fromEntries(PERSONNES.map(x => [x[0], 'actif'])), { 'Karim B.': 'bio', 'Lucas P.': { code: '482913' } }),
     /* ce que la passerelle Alobees (lecture seule) trouverait */
-    alobees: { chantiers: [['Résidence Les Tilleuls', 'Lille', true], ['Les Jardins du Parc', 'Armentières', true], ['Le Clos Saint-Jean', 'Lomme', true], ['Résidence Le Moulin', 'Wambrechies', false]] },
+    alobees: {
+      chantiers: [['Résidence Les Tilleuls', 'Lille', true], ['Les Jardins du Parc', 'Armentières', true], ['Le Clos Saint-Jean', 'Lomme', true], ['Résidence Le Moulin', 'Wambrechies', false]],
+      /* tâches du planning Alobees : seules celles qui commencent par « Incorporation » sont reprises */
+      taches: [
+        { id: 't1', nom: 'Incorporation R+3 Bat A', ch: 'til', debut: '09/10/2026', equipe: ['Karim B.', 'Mehdi R.'] },
+        { id: 't2', nom: 'Incorporation R+1 Bat A', ch: 'clo', debut: '12/10/2026', equipe: ['Lucas P.'] },
+        { id: 't3', nom: 'Passage fourreaux ECS et chauffage', ch: 'til', debut: '08/10/2026', equipe: ['Mehdi R.'] },
+      ],
+    },
   };
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
     id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, 
@@ -496,7 +512,7 @@ function seed() {
   mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', coulage: '03/10/2026' });
   mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Julien M.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
   mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Julien M.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
-  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', ['c9'], { notes: { c9: 'Bouchon manquant sur une attente du 021' }, histo: [['Envoyée', '05/10 09:58']] });
+  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', ['c9'], { date: '05/10/2026', notes: { c9: 'Bouchon manquant sur une attente du 021' }, histo: [['Envoyée', '05/10 09:58']] });
   mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Julien M.', ['c3'], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, notes: { c3: 'Nourrice décalée de 20 cm au 012' }, flag: ['c3', 'c6'], fautes: ['c3', 'c6'], demandeur: 'Sophie D.', flagNote: 'Reprendre la nourrice du 012 et recoter les sorties', motif: '2 points à corriger · Photo manquante', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
   SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
   DRAFTS = {};
@@ -553,6 +569,72 @@ function planningPour(profil) {
   return SRV.planning.filter(x => { const c = chantier(x.ch); return profil === 'patron' || c.conducteur === nom || c.chef === nom || x.chef === nom || x.chefEq === nom || x.comps.includes(nom); });
 }
 const code6 = () => String(Math.floor(100000 + Math.random() * 900000));
+/* 'jj/mm/aaaa' -> 'aaaammjj', pour comparer deux dates */
+const dateTri = d => d.split('/').reverse().join('');
+const aujourdhui = () => fmtD(AUJ) + '/2026';
+
+/* ---- Lecture d'un nom de fichier ou de tâche Alobees, sans IA ----
+   Exemples réels : « BEUVRY-Bat D-CVPB-R+1-ind A », « 03-BATA-RDC-INDICE C », « Incorporation RDC Bat A » */
+function lireNomPlan(nom) {
+  const texte = nom.toUpperCase();
+  const batiment = texte.match(/BAT(?:IMENT)?\s*-?\s*([A-Z0-9])\b/);
+  const niveau = texte.match(/\bRDC\b|\bR\+?(\d)\b/);
+  const indice = texte.match(/\bIND(?:ICE)?\s*-?\s*([A-Z0-9])\b/);
+  return {
+    bat: batiment ? 'Bât ' + batiment[1] : null,
+    niv: niveau ? (niveau[1] ? Number(niveau[1]) : 0) : null,
+    ind: indice ? indice[1] : null,
+  };
+}
+const estUneIncorporation = nomTache => /^incorporation/i.test(nomTache.trim());
+
+/* ---- Alobees simulé : ce que la passerelle (lecture seule) verrait pour un chantier ---- */
+const DOSSIERS_MASQUES = /DEVIS|CLIENT|ADMINISTRATIF|FACTUR/i;   // jamais affichés dans l'appli
+/* Indice disponible dans Alobees. Tilleuls Bât A R+1 a un indice plus récent, pour montrer l'alerte. */
+function indiceAlobees(c, bat, niv) {
+  if (c.id === 'til' && bat === 'Bât A' && niv === 1) return 'D';
+  return c.plans[bat + '|' + niv] || 'A';
+}
+function arborescenceAlobees(c) {
+  const ville = c.ville.toUpperCase();
+  const fichiers = [
+    { nom: 'CLIENTS', type: 'dossier' }, { nom: 'DEVIS', type: 'dossier' }, { nom: 'Docs Administratifs', type: 'dossier' },
+    { nom: `plan architecte bâtiment 1-50 indice 2-fusionné`, type: 'pdf', dossier: 'Plans Architecte' },
+  ];
+  c.bats.forEach(b => {
+    const dossier = 'Plans Incorporations ' + b.nom.replace('Bât', 'Bat');
+    b.niv.forEach((_, n) => fichiers.push({ nom: `${ville}-${b.nom.replace('Bât', 'Bat')}-PLB-${nivL(n)}-ind ${indiceAlobees(c, b.nom, n)}`, type: 'pdf', dossier }));
+  });
+  return fichiers;
+}
+/* Ce que l'appli propose pour un fichier : bâtiment / niveau / indice, ou « à associer à la main » */
+function propositionPlan(c, fichier) {
+  const lu = lireNomPlan(fichier.nom);
+  const reconnu = lu.niv !== null && c.bats.some(b => b.nom === lu.bat && lu.niv < b.niv.length);
+  if (!reconnu) return { reconnu: false };
+  const cle = lu.bat + '|' + lu.niv, actuel = c.plans[cle];
+  return { reconnu: true, cle, ind: lu.ind || '?', actuel, aJour: actuel === lu.ind, plusRecent: !!actuel && !!lu.ind && lu.ind > actuel };
+}
+/* Plans du Registre pour lesquels Alobees a un indice plus récent */
+function plansPerimes(c) {
+  return Object.entries(c.plans)
+    .map(([cle, ind]) => { const [bat, niv] = cle.split('|'); return { cle, bat, niv: Number(niv), ind, dispo: indiceAlobees(c, bat, Number(niv)) }; })
+    .filter(x => x.dispo > x.ind);
+}
+
+/* ---- Parallèle entre une fiche reçue et ce qui était prévu (planning / tâche Alobees) ---- */
+function comparerAuPlanning(f) {
+  const prevue = SRV.planning.find(x => x.ch === f.ch && x.bat === f.bat && x.niv === f.niv);
+  if (!prevue) return `<div class="info"><b>🔎 Fiche hors planning</b> : aucune incorporation n'était prévue pour ${h(lieu(f))}. Elle a été créée sur place (changement de plan, intervention non prévue…).</div>`;
+  const restants = prevue.logs.filter(l => !f.logs.includes(l));
+  const enPlus = f.logs.filter(l => !prevue.logs.includes(l));
+  const lignes = [
+    `${prevue.date === f.date ? '✓' : '⚠'} Prévue le ${prevue.date.slice(0, 5)}${prevue.source === 'alobees' ? ' (tâche Alobees)' : ''}, faite le ${f.date.slice(0, 5)}`,
+    restants.length ? `⚠ Logements prévus mais pas sur cette fiche : <b>${restants.join(' ')}</b>` : '✓ Tous les logements prévus sont sur la fiche',
+    enPlus.length ? `ℹ Logements en plus du planning : ${enPlus.join(' ')}` : '',
+  ].filter(Boolean);
+  return `<div class="${restants.length ? 'warnbox' : 'info'}"><b>🔎 Comparaison avec le planning</b><ul style="margin:6px 0 0;padding-left:18px">${lignes.map(l => `<li>${l}</li>`).join('')}</ul></div>`;
+}
 /* faux QR code (maquette) : motif stable dérivé du code */
 function qrSvg(graine) {
   let r = [...graine].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -817,10 +899,11 @@ function viewIncHome(p) {
          <button class="link" data-a="discard" style="display:block;margin:0 auto 10px">Abandonner ce brouillon</button>`
       : `<button class="btn btn--gold btn--big" data-a="new">＋ Nouvelle fiche d'incorporation</button><div style="height:14px"></div>`;
   }
-  const pl = planningPour(p.profil);
+  const pl = planningPour(p.profil).filter(x => dateTri(x.date) >= dateTri(aujourdhui()));
   if (pl.length || pr.nouvelle) {
     out += `<h3>📅 Incorporations programmées</h3>${pl.length ? pl.map(x => cardProg(p, x)).join('') : '<p class="muted">Aucune pour l\'instant.</p>'}`;
-    if (pr.nouvelle) out += '<button class="btn btn--ghost btn--block" data-a="prog-new" style="margin-bottom:6px">＋ Programmer une incorporation</button>';
+    if (pr.nouvelle) out += '<div class="ph-btns"><button class="btn btn--ghost" data-a="prog-new">＋ Programmer</button><button class="btn btn--ghost" data-a="alob-taches">⇩ Tâches Alobees</button></div>'
+      + '<p class="muted" style="margin:-4px 0 8px;font-size:12px">Une fiche peut toujours être créée sans programmation (changement de plan, imprévu).</p>';
   }
   const b = badgeFor(p.profil);
   if (pr.recues && pr.nouvelle) {
@@ -845,8 +928,8 @@ function viewIncHome(p) {
 }
 function cardProg(p, x) {
   const c = chantier(x.ch), demain = x.date === dateDemain();
-  return `<div class="prog"><strong style="color:var(--navy)">${demain ? 'Demain' : 'Le ' + x.date.slice(0, 5)} · ${h(c.nom)}</strong>
-    <div class="muted">${h(x.bat)} · ${nivL(x.niv)} · ${x.logs.join(' ')} · coulage ${x.coulage.slice(0, 5)}</div>
+  return `<div class="prog"><strong style="color:var(--navy)">${demain ? 'Demain' : 'Le ' + x.date.slice(0, 5)} · ${h(c.nom)}</strong>${x.source === 'alobees' ? ' <span class="pill p-envoyee">📁 Alobees</span>' : ''}
+    <div class="muted">${h(x.bat)} · ${nivL(x.niv)} · ${x.logs.join(' ')} · coulage ${x.coulage ? x.coulage.slice(0, 5) : 'à préciser'}</div>
     <div class="muted">Équipe : ${h([x.chef, x.chefEq, ...x.comps].filter(Boolean).join(', '))}</div>
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn--sm btn--ghost" data-a="rappel-mat" data-v="${x.id}">🧰 Matériel à préparer</button>
     ${P(p).nouvelle ? `<button class="btn btn--sm btn--primary" data-a="prog-start" data-v="${x.id}">▶ Démarrer la fiche</button>` : ''}</div></div>`;
@@ -901,6 +984,9 @@ function viewFiche(p, f) {
     <dt>Chef de chantier</dt><dd>${h(f.chef)}</dd><dt>Équipe</dt><dd>${h([f.chefEq, ...f.comps].filter(Boolean).join(', '))}</dd>
     <dt>Rempli par</dt><dd>${h(f.auteur)}</dd></dl>
     ${c.plans[f.bat + '|' + f.niv] ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"><button class="btn btn--sm btn--ghost" data-a="plan-fiche" data-v="${f.id}">🗺 Plan du niveau</button>${f.logs.map(cd => `<button class="btn btn--sm btn--ghost" data-a="plan-fiche-log" data-v="${f.id}|${cd}">🏠 ${cd}</button>`).join('')}</div>` : ''}</div>`;
+  if (pr.nouvelle) out += comparerAuPlanning(f);
+  const planActuel = c.plans[f.bat + '|' + f.niv];
+  if (f.planInd && planActuel && f.planInd !== planActuel) out += `<div class="alert">⚠ Fiche faite avec le plan <b>indice ${f.planInd}</b> : le plan actuel est l'<b>indice ${planActuel}</b>.</div>`;
   if (kos.length) out += `<h3 style="color:var(--ko)">Anomalies signalées</h3><div class="alert" style="font-weight:400">${kos.map(([id, l]) => `<div style="margin-bottom:4px"><b>✗ ${h(l)}</b>${f.notes[id] ? `<br><i>« ${h(f.notes[id])} »</i>` : ''}</div>`).join('')}</div>`;
   out += '<h3>Réponses</h3>' + SECS.map(s => {
     const n = s.items.length, ok = s.items.filter(([id]) => f.rep[id] === 'ok').length;
@@ -915,7 +1001,7 @@ function viewFiche(p, f) {
   // actions selon le profil
   let act = '';
   if (st === 'validee') {
-    act += `<div class="lock">🔒 Validée par ${h(f.valideur)} : verrouillée, plus modifiable.</div>`;
+    act += `<div class="lock">🔒 Validée par ${h(f.valideur)} : verrouillée, plus modifiable.${f.dansAlobees ? '<br>📁 Copie Excel déposée dans Alobees (preuve).' : ''}</div>`;
     if (pr.valide || pr.recues === 'validees') act += `<button class="btn btn--ghost btn--block" data-a="xlsx">⬇ Télécharger l'Excel</button>`;
     if (pr.valide) act += `<button class="btn btn--ghost btn--block" data-a="mail-factu" data-v="${f.id}">✉ Envoyer l'Excel à la facturation</button>`;
   } else if (aControler(f) && pr.valide) {
@@ -987,7 +1073,9 @@ function stepEmplacement(p, d) {
     const codes = Array.from({ length: nb }, (_, i) => code(d.niv, i + 1));
     out += `<div class="chips">${codes.map(cd => `<button class="chip" data-a="pick-log" data-v="${cd}" aria-pressed="${d.logs.includes(cd)}" ${!d.logs.includes(cd) && d.logs.length >= 6 ? 'disabled' : ''}>${cd}</button>`).join('')}</div>`;
     if (nb <= 6) out += `<button class="link" data-a="all-logs">Tout le niveau (${nb})</button>`;
-    if (c.plans[d.bat + '|' + d.niv]) out += `<div style="margin-top:10px"><button class="link" data-a="plan" data-v="${h(d.bat)}|${d.niv}">🗺 Voir le plan de ce niveau</button></div>`;
+    if (c.plans[d.bat + '|' + d.niv]) out += `<div style="margin-top:10px"><button class="link" data-a="plan" data-v="${h(d.bat)}|${d.niv}">🗺 Voir le plan de ce niveau (indice ${c.plans[d.bat + '|' + d.niv]})</button></div>`;
+    const perime = plansPerimes(c).find(x => x.bat === d.bat && x.niv === d.niv);
+    if (perime) out += `<div class="alert" style="margin-top:8px">⚠ Un plan plus récent existe dans Alobees (indice ${perime.dispo}). Ne travaillez pas sur l'indice ${perime.ind} : prévenez le conducteur.</div>`;
   } else out += '<span class="muted">Choisissez d\'abord le niveau</span>';
   out += '</div>';
   out += '<p class="muted" style="font-size:12px">Le lien « Voir le plan » n\'apparaît que si un plan existe pour ce niveau dans le Registre (dans la maquette : Tilleuls Bât A R+1 et R+2).</p>';
@@ -1139,9 +1227,12 @@ function viewRegChantier(p, c) {
       ${ed ? `<span class="stepper"><button data-a="nb" data-v="${c.id}|${bi}|${n}|-1" aria-label="Un logement de moins">−</button><b>${nb}</b><button data-a="nb" data-v="${c.id}|${bi}|${n}|1" aria-label="Un logement de plus">+</button></span>` : `<b>${nb} logements</b>`}</div>`).join('')}
       ${ed ? `<button class="link" data-a="add-niv" data-v="${c.id}|${bi}">＋ Ajouter un niveau</button>` : ''}</div>`).join('')}
     ${ed ? `<button class="link" data-a="add-bat" data-v="${c.id}">＋ Ajouter un bâtiment</button>` : ''}`;
-  out += `<h3>Plans par niveau</h3><div class="card">${c.bats.flatMap(b => b.niv.map((_, n) => {
-    const k = b.nom + '|' + n, ind = c.plans[k];
-    return `<div class="struct-row"><span>${h(b.nom)} · ${nivL(n)}</span>${ind ? `<button class="btn btn--sm btn--ghost" data-a="plan-reg" data-v="${h(k)}">🗺 Plan indice ${ind}</button>` : (ed ? `<button class="btn btn--sm btn--ghost" data-a="add-plan" data-v="${c.id}|${h(k)}">＋ PDF / photo</button>` : '<span class="muted">pas de plan</span>')}</div>`;
+  const perimes = plansPerimes(c);
+  out += `<h3>Plans par niveau</h3>`;
+  if (perimes.length) out += `<div class="alert">⚠ ${pluriel(perimes.length, 'nouvel indice')} dans Alobees : ${perimes.map(x => `${h(x.bat)} ${nivL(x.niv)} (indice ${x.dispo}, actuel ${x.ind})`).join(', ')}. Mettez à jour avant la prochaine incorporation.</div>`;
+  out += `<div class="card">${c.bats.flatMap(b => b.niv.map((_, n) => {
+    const k = b.nom + '|' + n, ind = c.plans[k], perime = perimes.find(x => x.cle === k);
+    return `<div class="struct-row"><span>${h(b.nom)} · ${nivL(n)}${perime ? ` <span class="pill p-ko">⚠ ind ${perime.dispo} dispo</span>` : ''}</span>${ind ? `<button class="btn btn--sm btn--ghost" data-a="plan-reg" data-v="${h(k)}">🗺 Plan indice ${ind}</button>` : (ed ? `<button class="btn btn--sm btn--ghost" data-a="add-plan" data-v="${c.id}|${h(k)}">＋ PDF / photo</button>` : '<span class="muted">pas de plan</span>')}</div>`;
   })).join('')}</div>`;
   if (ed) out += '<button class="btn btn--ghost btn--block" style="margin-top:8px" data-a="alob-plans" data-v="' + c.id + '">⇩ Récupérer les plans depuis Alobees</button>';
   out += `<h3>Équipe affectée</h3><div class="chips">${c.equipe.map(x => `<span class="chip" style="display:inline-flex;align-items:center">${h(x)}</span>`).join('')}</div>`;
@@ -1167,28 +1258,53 @@ function viewImport(p, c, s) {
 }
 
 /* ---------- Alobees (lecture seule, via le serveur) ---------- */
-function alobDocs(c) {
-  const out = [];
-  c.bats.forEach(b => b.niv.forEach((_, n) => { if (out.length < 5) { const ind = c.plans[b.nom + '|' + n] || 'ABC'[n % 3]; out.push({ nom: `PLAN EXE PLB ${nivL(n)} ${b.nom.toUpperCase()} ind ${ind}.pdf`, k: b.nom + '|' + n, ind }); } }));
-  return out.concat([{ nom: 'CCTP lot plomberie-chauffage.pdf', k: null }, { nom: 'Planning général.pdf', k: null }]);
-}
+const BANDEAU_LECTURE_SEULE = '<div class="info">🔒 <b>Lecture seule</b> : l\'appli lit Alobees, elle n\'y modifie et n\'y supprime rien. La clé reste sur le serveur. Les liens Alobees ne sont jamais envoyés aux téléphones : le serveur garde sa propre copie des plans.</div>';
 function viewAlob(p, s) {
-  let out = '<div class="info">🔒 <b>Lecture seule</b> : l\'appli lit Alobees, elle n\'y modifie et n\'y supprime rien. La clé Alobees reste sur le serveur, jamais dans le téléphone.</div>';
-  if (!s.lu) return out + '<button class="btn btn--primary btn--big" data-a="alob-read">Lire Alobees</button>';
-  if (s.mode === 'ch') {
-    out += `<p class="lead">${SRV.alobees.chantiers.length} chantiers trouvés dans Alobees. Cochez ceux à ajouter au Registre.</p><div class="list">`;
-    out += SRV.alobees.chantiers.map(([nom, ville, deja], i) => deja
-      ? `<div class="pick" style="opacity:.6">✓ ${h(nom)} · ${h(ville)} <span class="muted" style="margin-left:auto">déjà dans le registre</span></div>`
-      : `<button class="pick" data-a="alob-sel" data-v="${i}" aria-pressed="${s.sel.includes(i)}" style="${s.sel.includes(i) ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : ''}">${s.sel.includes(i) ? '☑' : '☐'} ${h(nom)} · ${h(ville)} <span class="pill p-envoyee" style="margin-left:auto">nouveau</span></button>`).join('');
-    return out + `</div><p class="muted">La structure (bâtiments, niveaux, logements) se complète ensuite par import PDF / Excel ou à la main.</p>
-      <div class="foot__row"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer</button></div>`;
-  }
-  const c = chantier(s.id), docs = alobDocs(c);
-  out += `<p class="lead">${docs.length} documents trouvés dans le dossier Alobees du chantier. L'appli repère le niveau dans le <b>nom du fichier</b> (sans IA). Vérifiez, puis enregistrez.</p><div class="list">`;
-  out += docs.map((x, i) => x.k
-    ? `<button class="pick" data-a="alob-sel" data-v="${i}" aria-pressed="${s.sel.includes(i)}" style="${s.sel.includes(i) ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : ''}">${s.sel.includes(i) ? '☑' : '☐'} 📄 ${h(x.nom)}<span style="margin-left:auto;white-space:nowrap">→ ${h(x.k.replace('|', ' · ').replace(/ · (\d)$/, (m, n) => ' · ' + nivL(+n)))}</span></button>`
-    : `<div class="pick" style="opacity:.6">📄 ${h(x.nom)} <span class="muted" style="margin-left:auto">ignoré (pas un plan)</span></div>`).join('');
-  return out + `</div><div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer ${pluriel(s.sel.length, 'plan')}</button></div>`;
+  if (!s.lu) return BANDEAU_LECTURE_SEULE + '<button class="btn btn--primary btn--big" data-a="alob-read">Lire Alobees</button>';
+  return BANDEAU_LECTURE_SEULE + (s.mode === 'ch' ? viewAlobChantiers(s) : viewAlobPlans(s));
+}
+const deuxLignes = (titre, sous) => `<span class="pick__txt">${titre}<span class="pick__sous">${sous}</span></span>`;
+function boutonCoche(action, valeur, coche, contenu) {
+  const style = coche ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : '';
+  return `<button class="pick" data-a="${action}" data-v="${h(valeur)}" aria-pressed="${coche}" style="${style}">${coche ? '☑' : '☐'} ${contenu}</button>`;
+}
+function viewAlobChantiers(s) {
+  const lignes = SRV.alobees.chantiers.map(([nom, ville, deja], i) => deja
+    ? `<div class="pick" style="opacity:.6">✓ ${h(nom)} · ${h(ville)} <span class="muted" style="margin-left:auto">déjà dans le registre</span></div>`
+    : boutonCoche('alob-sel', i, s.sel.includes(String(i)), `${h(nom)} · ${h(ville)} <span class="pill p-envoyee" style="margin-left:auto">nouveau</span>`));
+  return `<p class="lead">${SRV.alobees.chantiers.length} chantiers trouvés (nom, adresse, client, dates, chefs). Cochez ceux à ajouter au Registre.</p><div class="list">${lignes.join('')}</div>
+    <p class="muted">Les plans se récupèrent ensuite chantier par chantier.</p>
+    <div class="foot__row"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer</button></div>`;
+}
+function ligneFichierAlobees(c, fichier, s) {
+  const prop = propositionPlan(c, fichier);
+  if (!prop.reconnu) return `<div class="pick" style="opacity:.75">${deuxLignes('📄 ' + h(fichier.nom), '? niveau non reconnu : à associer à la main')}</div>`;
+  const [bat, niv] = prop.cle.split('|');
+  const etat = prop.aJour ? ' · déjà à jour' : prop.plusRecent ? ` · <b style="color:var(--ko)">nouvel indice (actuel ${prop.actuel})</b>` : '';
+  return boutonCoche('alob-sel', fichier.nom, s.sel.includes(fichier.nom), deuxLignes('📄 ' + h(fichier.nom), `→ ${h(bat)} · ${nivL(Number(niv))} · ind ${prop.ind}${etat}`));
+}
+function viewAlobPlans(s) {
+  const c = chantier(s.id), arbo = arborescenceAlobees(c);
+  const masques = arbo.filter(x => x.type === 'dossier' && DOSSIERS_MASQUES.test(x.nom)).map(x => x.nom);
+  const dossiers = [...new Set(arbo.filter(x => x.type === 'pdf').map(x => x.dossier))];
+  let out = `<p class="lead">Dossiers Alobees du chantier. L'appli lit le <b>nom de chaque fichier</b> (sans IA) et propose bâtiment, niveau et indice. Vérifiez, puis enregistrez.</p>`;
+  out += `<div class="pick" style="opacity:.6">🔒 ${masques.map(h).join(', ')} : masqués, jamais affichés dans l'appli</div>`;
+  out += dossiers.map(dossier => `<h5>📁 Plans › ${h(dossier)}</h5>` + arbo.filter(x => x.dossier === dossier).map(f => ligneFichierAlobees(c, f, s)).join('')).join('');
+  out += '<p class="muted">Un fichier non reconnu (ex. plan architecte fusionné) peut être associé à la main à un niveau.</p>';
+  return out + `<div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer ${pluriel(s.sel.length, 'plan')}</button></div>`;
+}
+/* Tâches Alobees : seules les « Incorporation … » deviennent des incorporations programmées */
+function viewTachesAlobees(p, s) {
+  const lignes = SRV.alobees.taches.map(t => {
+    const c = chantier(t.ch), lu = lireNomPlan(t.nom);
+    if (!estUneIncorporation(t.nom)) return `<div class="pick" style="opacity:.6">${deuxLignes(h(t.nom) + ' · ' + h(c.nom), 'ignorée (pas une incorporation)')}</div>`;
+    if (SRV.planning.some(x => x.tache === t.id)) return `<div class="pick" style="opacity:.6">✓ ${deuxLignes(h(t.nom) + ' · ' + h(c.nom), 'déjà reprise')}</div>`;
+    return boutonCoche('tache-sel', t.id, s.sel.includes(t.id), deuxLignes(`${h(t.nom)} · ${h(c.nom)} · le ${t.debut.slice(0, 5)}`, `→ ${h(lu.bat || '?')} · ${lu.niv === null ? '?' : nivL(lu.niv)} · équipe : ${h(t.equipe.join(', '))}`));
+  });
+  return `<div class="sheet__h"><strong>Tâches Alobees</strong><button class="x" data-a="sheet-x" aria-label="Fermer">✕</button></div>
+    <p class="muted">Lecture seule. Les tâches qui commencent par « Incorporation » deviennent des incorporations programmées, avec l'équipe du planning Alobees : rappel la veille et fiche pré-remplie.</p>
+    <div class="list">${lignes.join('')}</div>
+    <button class="btn btn--ok btn--block" style="margin-top:12px" data-a="taches-ok" ${s.sel.length ? '' : 'disabled'}>Reprendre ${pluriel(s.sel.length, 'tâche')}</button>`;
 }
 
 /* ---------- Connexion ---------- */
@@ -1256,6 +1372,7 @@ function viewSheet(p) {
       ${abs ? '<div class="info">Vous validez <b>à la place du conducteur absent</b>. Votre nom apparaîtra comme valideur.</div>' : ''}
       <p>La fiche sera <b>verrouillée</b> : plus aucune modification possible. ${f.auteur} sera prévenu.</p>
       ${nbKo(f) ? `<div class="alert">⚠ ${nbKo(f)} anomalie signalée sur cette fiche. Vérifiez qu'elle est réglée avant d'autoriser le coulage.</div>` : ''}
+      <label class="check check--small"><input type="checkbox" data-a="sheet-alob" ${s.alobees ? 'checked' : ''}><span>📁 Déposer l'Excel dans Alobees<small>${h(chantier(f.ch).nom)} › Fiches incorporation · preuve en plus · seule écriture autorisée vers Alobees (à confirmer avec Alobees)</small></span></label>
       <label class="check check--small" style="margin-bottom:10px"><input type="checkbox" data-a="sheet-excel" ${s.excel ? 'checked' : ''}><span>Envoyer l'Excel à la facturation<small>${f.excel ? 'Demandé par ' + h(f.auteur) + ' à l\'envoi' : 'Non demandé à l\'envoi'} · pièce jointe à ${MAIL_FACTU}</small></span></label>
       <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}">✓ Valider</button></div>`;
   }
@@ -1269,10 +1386,11 @@ function viewSheet(p) {
       <textarea rows="2" data-in="motif-txt" placeholder="Précision pour l'équipe (facultatif)">${h(s.txt || '')}</textarea>
       <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ko" data-a="corriger-ok" data-v="${s.id}" ${s.pts.length || s.motif ? '' : 'disabled'}>↩ Renvoyer (${pluriel(s.pts.length, 'point')})</button></div>`;
   }
+  if (s.t === 'alob-taches') return viewTachesAlobees(p, s);
   if (s.t === 'rappel-mat') {
     const pl = SRV.planning.find(y => y.id === s.id), c = chantier(pl.ch), mem = memoire(pl.ch);
     return `<div class="sheet__h"><strong>${pl.date === dateDemain() ? 'Demain' : 'Le ' + pl.date.slice(0, 5)} : incorporation</strong>${x}</div>
-      <p class="muted">${h(c.nom)} · ${h(pl.bat)} · ${nivL(pl.niv)} · ${pl.logs.join(' ')} · coulage ${pl.coulage.slice(0, 5)}</p>
+      <p class="muted">${h(c.nom)} · ${h(pl.bat)} · ${nivL(pl.niv)} · ${pl.logs.join(' ')} · coulage ${pl.coulage ? pl.coulage.slice(0, 5) : 'à préciser'}</p>
       ${mem.length ? memBox(mem, 'Points déjà oubliés sur ce chantier') : '<div class="lock">👍 Aucun point oublié en mémoire sur ce chantier</div>'}
       <h5>🧰 Matériel à préparer ce soir</h5><ul class="matlist">${SECS[1].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>
       <h5>📄 Documents à avoir</h5><ul class="matlist">${SECS[0].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>`;
@@ -1360,6 +1478,7 @@ function act(p, a, v, ev) {
     case 'prog-start': {
       const pl = SRV.planning.find(y => y.id === +v);
       DRAFTS[p.profil] = Object.assign(newDraft(p), { ch: pl.ch, bat: pl.bat, niv: pl.niv, logs: pl.logs.slice(), coulage: pl.coulage, chef: pl.chef, chefEq: pl.chefEq, comps: pl.comps.slice(), step: 4, visited: 4 });
+      if (!pl.coulage) DRAFTS[p.profil].step = 3;   // date de coulage inconnue dans Alobees : on la demande
       p.scr = { n: 'wizard' }; p.hist = []; toast(p, 'Chantier, emplacement et équipe déjà remplis'); break;
     }
     case 'code-pers': {
@@ -1380,21 +1499,47 @@ function act(p, a, v, ev) {
     case 'alob-ch': go(p, { n: 'reg-alob', mode: 'ch', lu: false, sel: [] }); break;
     case 'alob-plans': go(p, { n: 'reg-alob', mode: 'plans', id: v, lu: false, sel: [] }); break;
     case 'alob-read': {
-      const s2 = p.scr; s2.lu = true;
-      if (s2.mode === 'plans') s2.sel = alobDocs(chantier(s2.id)).map((y, i) => (y.k ? i : -1)).filter(i => i >= 0);
-      log(P(p).nom, 'Alobees', `🔒 Lecture seule : ${s2.mode === 'ch' ? 'liste des chantiers' : 'documents du chantier ' + chantier(s2.id).nom} (via le serveur)`, 't-mail'); break;
+      const ecran = p.scr;
+      ecran.lu = true;
+      if (ecran.mode === 'plans') {
+        /* pré-coche les plans reconnus qui ne sont pas déjà à jour */
+        const c = chantier(ecran.id);
+        ecran.sel = arborescenceAlobees(c).filter(f => { const prop = propositionPlan(c, f); return prop.reconnu && !prop.aJour; }).map(f => f.nom);
+      }
+      log(P(p).nom, 'Alobees', `🔒 Lecture seule : ${ecran.mode === 'ch' ? 'liste des chantiers' : 'dossiers du chantier ' + chantier(ecran.id).nom} (via le serveur)`, 't-mail');
+      break;
     }
-    case 'alob-sel': { const s2 = p.scr, i = +v; s2.sel = s2.sel.includes(i) ? s2.sel.filter(y => y !== i) : [...s2.sel, i]; break; }
+    case 'alob-sel': { const ecran = p.scr; ecran.sel = ecran.sel.includes(v) ? ecran.sel.filter(x => x !== v) : [...ecran.sel, v]; break; }
     case 'alob-save': {
-      const s2 = p.scr;
-      if (s2.mode === 'ch') s2.sel.forEach(i => { const [nom, ville] = SRV.alobees.chantiers[i]; SRV.alobees.chantiers[i][2] = true; SRV.chantiers.push({ id: 'alob' + i, nom, ville, adresse: 'importée depuis Alobees', client: '—', dates: '—', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [30, 10], bats: [{ nom: 'Bât A', niv: [2, 2] }], plans: {}, equipe: [] }); });
-      else { const c = chantier(s2.id), docs = alobDocs(c); s2.sel.forEach(i => { c.plans[docs[i].k] = docs[i].ind; }); }
-      const nb = s2.sel.length; back(p); toast(p, s2.mode === 'ch' ? `${pluriel(nb, 'chantier')} ajouté(s) : structure provisoire à compléter` : `${pluriel(nb, 'plan')} récupéré(s) depuis Alobees`); break;
+      const ecran = p.scr, nb = ecran.sel.length;
+      if (ecran.mode === 'ch') {
+        ecran.sel.forEach(i => {
+          const [nom, ville] = SRV.alobees.chantiers[+i];
+          SRV.alobees.chantiers[+i][2] = true;
+          SRV.chantiers.push({ id: 'alob' + i, nom, ville, adresse: 'importée depuis Alobees', client: '—', dates: '—', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [30, 10], bats: [{ nom: 'Bât A', niv: [2, 2] }], plans: {}, equipe: [] });
+        });
+      } else {
+        const c = chantier(ecran.id);
+        arborescenceAlobees(c).filter(f => ecran.sel.includes(f.nom)).forEach(f => { const prop = propositionPlan(c, f); c.plans[prop.cle] = prop.ind; });
+        log('Serveur', 'Alobees', `📥 ${pluriel(nb, 'plan')} copié(s) depuis Alobees dans le stockage privé de l'appli`, 't-mail');
+      }
+      back(p);
+      toast(p, ecran.mode === 'ch' ? `${pluriel(nb, 'chantier')} ajouté(s) : structure provisoire à compléter` : `${pluriel(nb, 'plan')} récupéré(s) depuis Alobees`);
+      break;
     }
-    case 'sheet-x': p.sheet = null; break;
-    case 'toast': toast(p, v); break;
-    case 'xlsx': toast(p, 'Maquette : le vrai fichier Excel sera généré au lot B'); break;
-    case 'export': toast(p, 'Maquette : export Excel du tableau de bord au lot D'); break;
+    case 'alob-taches': p.sheet = { t: 'alob-taches', sel: [] }; break;
+    case 'tache-sel': { const s2 = p.sheet; s2.sel = s2.sel.includes(v) ? s2.sel.filter(x => x !== v) : [...s2.sel, v]; break; }
+    case 'taches-ok': {
+      p.sheet.sel.forEach(idTache => {
+        const t = SRV.alobees.taches.find(x => x.id === idTache), c = chantier(t.ch), lu = lireNomPlan(t.nom);
+        const bat = c.bats.find(b => b.nom === lu.bat) || c.bats[0], niv = lu.niv ?? 0;
+        const logs = Array.from({ length: Math.min(bat.niv[niv] || 0, 6) }, (_, i) => code(niv, i + 1));   // une fiche = 6 logements max
+        const chefEq = t.equipe.find(n => SRV.personnes.some(x => x[0] === n && x[1] === "Chef d'équipe")) || null;
+        SRV.planning.push({ id: ++PSEQ, source: 'alobees', tache: t.id, ch: t.ch, bat: bat.nom, niv, logs, date: t.debut, coulage: null, chef: c.chef, chefEq, comps: t.equipe.filter(n => n !== chefEq) });
+      });
+      log('Alobees', 'Serveur', `📅 ${pluriel(p.sheet.sel.length, 'tâche')} « Incorporation » reprise(s) dans le planning (lecture seule)`, 't-mail');
+      p.sheet = null; toast(p, 'Ajouté aux incorporations programmées'); break;
+    }
     case 'notif': {
       const id = p.notif.ficheId, sh = p.notif.sheet; p.notif = null;
       if (sh) { p.sheet = sh; break; }
@@ -1407,15 +1552,17 @@ function act(p, a, v, ev) {
     case 'discard': DRAFTS[p.profil] = null; toast(p, 'Brouillon abandonné'); break;
     case 'quit': p.scr = { n: 'home' }; p.hist = []; toast(p, 'Brouillon gardé sur le téléphone'); break;
     case 'open': { const f = fiche(+v); ouvrirFiche(p, f); go(p, { n: 'fiche', id: f.id }); break; }
-    case 'valider': p.sheet = { t: 'valider', id: +v, excel: fiche(+v).excel }; break;
+    case 'valider': p.sheet = { t: 'valider', id: +v, excel: fiche(+v).excel, alobees: true }; break;
+    case 'sheet-alob': p.sheet.alobees = ev.target.checked; break;
     case 'sheet-excel': p.sheet.excel = ev.target.checked; break;
     case 'sign-clear': d.sign = null; break;
     case 'valider-ok': {
       const f = fiche(+v), pr = P(p);
       f.statut = 'validee'; f.valideur = pr.valide === 'absence' ? pr.nom + ' (conducteur absent)' : pr.nom;
       f.histo.push(['Validée par ' + f.valideur, fmtD(AUJ) + ' ' + now()]); f.vu = { [p.profil]: 1, chef: 1 };
-      const envoiExcel = p.sheet.excel;
+      const envoiExcel = p.sheet.excel, depotAlobees = p.sheet.alobees;
       p.sheet = null;
+      if (depotAlobees) { f.dansAlobees = true; setTimeout(() => { log('Serveur', 'Alobees', `📁 ${f.num}.xlsx déposé dans Alobees › ${chantier(f.ch).nom} › Fiches incorporation (preuve)`, 't-mail'); renderAll(); }, 900); }
       if (envoiExcel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx (fiche validée) envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 1200);
       log(pr.nom, 'Serveur', `✓ ${f.num} validée et verrouillée`, 't-ok');
       setTimeout(() => {
@@ -1480,7 +1627,7 @@ function act(p, a, v, ev) {
         Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, alobees: d.alobees, flag: [], flagNote: null, motif: null, coulage: d.coulage, logs: d.logs, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60) });
       } else {
         f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom,
-          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, alobees: d.alobees, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
+          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, alobees: d.alobees, planInd: chantier(d.ch).plans[d.bat + '|' + d.niv] || null, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
         SRV.fiches.push(f);
       }
       const fix = !!d.fixOf;
