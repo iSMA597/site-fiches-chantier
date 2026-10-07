@@ -756,12 +756,12 @@ function notify(profils, title, body, ficheId, sheet) {
 /* Bureau : le conducteur du chantier + la direction + le chef de chantier (celui du chantier et celui choisi sur la fiche) */
 function destinataires(f) {
   const c = chantier(f.ch);
-  return profilsDe(['Direction', c.conducteur, c.chef, f.chef]).filter(k => PROFILS[k].nom !== f.auteur);
+  return profilsDe([PROFILS.patron.nom, c.conducteur, c.chef, f.chef]).filter(k => PROFILS[k].nom !== f.auteur);
 }
 /* texte lisible des destinataires, affiché avant l'envoi */
 function destinatairesTexte(d, auteur) {
   const c = chantier(d.ch);
-  const bureau = [`${c.conducteur} (conducteur)`, 'Direction', ...[...new Set([c.chef, d.chef].filter(Boolean))].map(x => x + ' (chef de chantier)')].filter(x => !x.startsWith(auteur));
+  const bureau = [`${c.conducteur} (conducteur)`, `${PROFILS.patron.nom} (direction)`, ...[...new Set([c.chef, d.chef].filter(Boolean))].map(x => x + ' (chef de chantier)')].filter(x => !x.startsWith(auteur));
   const eq = [d.chefEq, ...d.comps].filter(x => x && x !== auteur);
   return { bureau, eq };
 }
@@ -1802,7 +1802,7 @@ function simulerVeille() {
   SRV.chantiers.forEach(c => {
     const fs = SRV.fiches.filter(f => f.ch === c.id && f.coulage === dem && f.statut !== 'attente');
     if (!fs.length) return;
-    const nv = fs.filter(f => f.statut !== 'validee'), noms = [...new Set(fs.flatMap(f => [f.auteur, f.chef, ...equipe(f)]).concat([c.conducteur, 'Direction']))];
+    const nv = fs.filter(f => f.statut !== 'validee'), noms = [...new Set(fs.flatMap(f => [f.auteur, f.chef, ...equipe(f)]).concat([c.conducteur, PROFILS.patron.nom]))];
     log('Serveur', 'Équipe', `🔔 18:00 veille de coulage ${c.nom} → ${noms.join(', ')}${nv.length ? ' : ⚠ ' + pluriel(nv.length, 'fiche') + ' pas encore validée(s)' : ''}`, 't-notif');
     pousser(profilsDe(noms), `Coulage demain : ${c.nom}`, nv.length ? `⚠ ${pluriel(nv.length, 'fiche')} pas encore validée(s)` : 'Toutes les fiches sont validées ✓', { t: 'rappel-coul', ch: c.id, date: dem });
   });
