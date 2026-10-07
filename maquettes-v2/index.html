@@ -374,7 +374,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <div class="flow__n" id="fn-c"><b>📱</b>Chef · équipe</div><div class="flow__a" id="fa-cs">➜</div>
         <div class="flow__n" id="fn-s"><b>☁</b>Serveur</div><div class="flow__a" id="fa-sp">➜</div>
         <div class="flow__n" id="fn-p"><b>💻</b>Conducteur · Patron</div>
-        <div class="flow__mail" style="gap:6px"><div class="flow__n" id="fn-f" style="flex:1"><b>✉</b>Facturation (Excel)</div><div class="flow__n" id="fn-a" style="flex:1"><b>📁</b>Alobees (lecture seule : chantiers + plans)</div></div>
+        <div class="flow__mail" style="gap:6px"><div class="flow__n" id="fn-f" style="flex:1"><b>✉</b>Facturation (Excel)</div><div class="flow__n" id="fn-a" style="flex:1"><b>📁</b>Alobees (chantiers + plans · dépôt de l'Excel)</div></div>
       </div>
       <ol class="journal" id="journal" aria-live="polite"></ol>
     </section>
@@ -406,7 +406,8 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Alobees, testé avec la vraie clé</b> : 74 chantiers, arborescence complète des documents, PDF téléchargeables. Dans l'appli : dossiers Devis / Clients <b>masqués</b>, bâtiment / niveau / indice <b>lus dans le nom du fichier</b>, alerte quand un <b>nouvel indice</b> arrive. <i>Essai : patron › Registre › Tilleuls.</i></li>
         <li>✓ <b>Fiche sans programmation</b> toujours possible. À la réception, <b>comparaison</b> avec ce qui était prévu (date, logements restants, indice du plan). <i>Essai : conducteur › F-0143.</i></li>
         <li>✓ <b>Le conducteur signe au doigt</b> pour valider. Les deux signatures (auteur + conducteur) sont sur la fiche. <i>Essai : conducteur › une fiche reçue › Valider.</i></li>
-        <li>✓ <b>Alobees, en lecture seule : plans et Registre (chantiers) uniquement.</b> Les incorporations se programment dans l'appli. Les points de contrôle de la fiche (Fait / Anomalie) ne changent pas.</li>
+        <li>✓ <b>Alobees : lecture des plans et du Registre (chantiers).</b> Une seule écriture : à la validation, l'Excel de la fiche est déposé dans le dossier « Fiches incorporation » du chantier (trace). Les incorporations se programment dans l'appli. Les points de contrôle (Fait / Anomalie) ne changent pas.</li>
+        <li>✓ <b>Validation</b> par le conducteur, <b>ou par le patron</b> s'il est absent, avec signature au doigt dans les deux cas. <i>Essai : profil Patron › Reçues › une fiche › Valider.</i></li>
         <li>✓ <b>Mémoire des erreurs et rappels</b> gardés.</li>
         <li>✓ <b>Facturation gardée</b>. Adresse : euro.sanichauff@gmail.com.</li>
       </ol>
@@ -446,6 +447,7 @@ const RAPPELS = [
 const ALOBEES = ['Vue générale de chaque logement / zone', 'Passages principaux des gaines', 'Sorties sanitaires et alimentations EF / ECS', 'Réseaux chauffage et nourrices / attentes', 'Traversées et réservations particulières', 'Photo avec repères fixes visibles'];
 const STEPS = ['Chantier', 'Emplacement', 'Équipe', 'Documents', 'Matériel', 'Contrôles', 'Photos', 'Envoi'];
 const MAIL_FACTU = 'euro.sanichauff@gmail.com';
+const DOSSIER_ALOBEES_FICHES = 'Fiches incorporation';   // seul dossier Alobees où l'appli écrit
 
 const PROFILS = {
   compagnon:   { nom: 'Karim B.',   role: 'Compagnon',              tabs: ['inc'],               nouvelle: false, recues: null },
@@ -995,7 +997,7 @@ function viewFiche(p, f) {
   // actions selon le profil
   let act = '';
   if (st === 'validee') {
-    act += `<div class="lock">🔒 Validée par ${h(f.valideur)} : verrouillée, plus modifiable.</div>`;
+    act += `<div class="lock">🔒 Validée par ${h(f.valideur)} : verrouillée, plus modifiable.${f.dansAlobees ? `<br>📁 Excel déposé dans Alobees › ${DOSSIER_ALOBEES_FICHES}.` : ''}</div>`;
     if (pr.valide || pr.recues === 'validees') act += `<button class="btn btn--ghost btn--block" data-a="xlsx">⬇ Télécharger l'Excel</button>`;
     if (pr.valide) act += `<button class="btn btn--ghost btn--block" data-a="mail-factu" data-v="${f.id}">✉ Envoyer l'Excel à la facturation</button>`;
   } else if (aControler(f) && pr.valide) {
@@ -1360,6 +1362,7 @@ function viewSheet(p) {
       ${abs ? '<div class="info">Vous validez <b>à la place du conducteur absent</b>. Votre nom apparaîtra comme valideur.</div>' : ''}
       <p>La fiche sera <b>verrouillée</b> : plus aucune modification possible. ${f.auteur} sera prévenu.</p>
       ${nbKo(f) ? `<div class="alert">⚠ ${nbKo(f)} anomalie signalée sur cette fiche. Vérifiez qu'elle est réglée avant d'autoriser le coulage.</div>` : ''}
+      <label class="check check--small"><input type="checkbox" data-a="sheet-alob" ${s.alobees ? 'checked' : ''}><span>📁 Déposer l'Excel dans Alobees (trace)<small>${h(chantier(f.ch).nom)} › ${DOSSIER_ALOBEES_FICHES} · seul dossier où l'appli écrit dans Alobees</small></span></label>
       <label class="check check--small" style="margin-bottom:10px"><input type="checkbox" data-a="sheet-excel" ${s.excel ? 'checked' : ''}><span>Envoyer l'Excel à la facturation<small>${f.excel ? 'Demandé par ' + h(f.auteur) + ' à l\'envoi' : 'Non demandé à l\'envoi'} · pièce jointe à ${MAIL_FACTU}</small></span></label>
       <div class="field"><div class="field__l">Signature du conducteur <small>avec le doigt</small></div>
         <div class="sign"><canvas data-sign="validation" aria-label="Zone de signature du conducteur"></canvas>${s.sign ? '' : '<span class="sign__ph">Signez ici</span>'}</div>
@@ -1538,7 +1541,8 @@ function act(p, a, v, ev) {
     case 'discard': DRAFTS[p.profil] = null; toast(p, 'Brouillon abandonné'); break;
     case 'quit': p.scr = { n: 'home' }; p.hist = []; toast(p, 'Brouillon gardé sur le téléphone'); break;
     case 'open': { const f = fiche(+v); ouvrirFiche(p, f); go(p, { n: 'fiche', id: f.id }); break; }
-    case 'valider': p.sheet = { t: 'valider', id: +v, excel: fiche(+v).excel }; break;
+    case 'valider': p.sheet = { t: 'valider', id: +v, excel: fiche(+v).excel, alobees: true }; break;
+    case 'sheet-alob': p.sheet.alobees = ev.target.checked; break;
     case 'sheet-excel': p.sheet.excel = ev.target.checked; break;
     case 'sign-clear': d.sign = null; break;
     case 'sign-clear-validation': p.sheet.sign = null; break;
@@ -1547,7 +1551,11 @@ function act(p, a, v, ev) {
       f.statut = 'validee'; f.valideur = pr.valide === 'absence' ? pr.nom + ' (conducteur absent)' : pr.nom;
       f.histo.push(['Validée par ' + f.valideur, fmtD(AUJ) + ' ' + now()]); f.vu = { [p.profil]: 1, chef: 1 };
       f.signValideur = p.sheet.sign; f.valideLe = fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60);
-      const envoiExcel = p.sheet.excel;
+      const envoiExcel = p.sheet.excel, depotAlobees = p.sheet.alobees;
+      if (depotAlobees) {
+        f.dansAlobees = true;
+        setTimeout(() => { log('Serveur', 'Alobees', `📁 ${f.num}.xlsx déposé dans Alobees › ${chantier(f.ch).nom} › ${DOSSIER_ALOBEES_FICHES} (trace)`, 't-mail'); renderAll(); }, 900);
+      }
       p.sheet = null;
       if (envoiExcel) setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx (fiche validée) envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 1200);
       log(pr.nom, 'Serveur', `✓ ${f.num} validée et verrouillée`, 't-ok');
