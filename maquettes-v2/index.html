@@ -481,6 +481,7 @@ function seed() {
     planning: [{ id: 0, ch: 'til', bat: 'Bât B', niv: 2, logs: ['021', '022', '023'], date: '05/10/2026', coulage: '07/10/2026', chef: 'Antoine C.', chefEq: null, comps: ['Mehdi R.', 'Lucas P.'] },
       { id: 1, ch: 'jar', bat: 'Bât 1', niv: 2, logs: ['021', '022', '023', '024'], date: '07/10/2026', coulage: '15/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: ['Karim B.', 'Lucas P.'] }],
     rappels: [],
+    preparation: {},   /* « profil|incorporation » -> points de matériel / documents cochés */
     personnes: PERSONNES.map(x => x.slice()),
     /* état des comptes : actif, bio (Face ID / empreinte) ou { code } en attente d'activation */
     comptes: Object.assign(Object.fromEntries(PERSONNES.map(x => [x[0], 'actif'])), { 'Karim B.': 'bio', 'Lucas P.': { code: '482913' } }),
@@ -1256,6 +1257,13 @@ function viewAlob(p, s) {
   return BANDEAU_LECTURE_SEULE + (s.mode === 'ch' ? viewAlobChantiers(s) : viewAlobPlans(s));
 }
 const deuxLignes = (titre, sous) => `<span class="pick__txt">${titre}<span class="pick__sous">${sous}</span></span>`;
+/* Liste à cocher de la veille (matériel, documents) : gardée par personne et par incorporation */
+function listePreparation(p, pl, section, titre) {
+  const coches = SRV.preparation[p.profil + '|' + pl.id] || [];
+  const prets = section.items.filter(([id]) => coches.includes(id)).length;
+  return `<h5>${titre} <small class="muted">${prets}/${section.items.length} prêt${prets > 1 ? 's' : ''}</small></h5>`
+    + section.items.map(([id, l]) => boutonCoche('mat-coche', pl.id + '|' + id, coches.includes(id), h(l))).join('');
+}
 function boutonCoche(action, valeur, coche, contenu) {
   const style = coche ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : '';
   return `<button class="pick" data-a="${action}" data-v="${h(valeur)}" aria-pressed="${coche}" style="${style}">${coche ? '☑' : '☐'} ${contenu}</button>`;
@@ -1374,8 +1382,8 @@ function viewSheet(p) {
     return `<div class="sheet__h"><strong>${pl.date === dateDemain() ? 'Demain' : 'Le ' + pl.date.slice(0, 5)} : incorporation</strong>${x}</div>
       <p class="muted">${h(c.nom)} · ${h(pl.bat)} · ${nivL(pl.niv)} · ${pl.logs.join(' ')} · coulage ${pl.coulage ? pl.coulage.slice(0, 5) : 'à préciser'}</p>
       ${mem.length ? memBox(mem, 'Points déjà oubliés sur ce chantier') : '<div class="lock">👍 Aucun point oublié en mémoire sur ce chantier</div>'}
-      <h5>🧰 Matériel à préparer ce soir</h5><ul class="matlist">${SECS[1].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>
-      <h5>📄 Documents à avoir</h5><ul class="matlist">${SECS[0].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>`;
+      ${listePreparation(p, pl, SECS[1], '🧰 Matériel à préparer ce soir')}
+      ${listePreparation(p, pl, SECS[0], '📄 Documents à avoir')}`;
   }
   if (s.t === 'rappel-coul') {
     const c = chantier(s.ch), fs = SRV.fiches.filter(f => f.ch === c.id && f.coulage === s.date && f.statut !== 'attente'), nv = fs.filter(f => f.statut !== 'validee');
@@ -1441,6 +1449,11 @@ function act(p, a, v, ev) {
     case 'act-bio': SRV.comptes[P(p).nom] = v === 'oui' ? 'bio' : 'actif'; p.loggedOut = false; p.loginStep = 'login'; log(P(p).nom, 'Serveur', `👤 Compte activé${v === 'oui' ? ' + Face ID / empreinte' : ''}`); toast(p, v === 'oui' ? '🔐 Face ID / empreinte activé' : 'Compte activé'); break;
     case 'rappel-open': { const r = SRV.rappels.find(y => y.id === +v); p.sheet = r.sheet; break; }
     case 'rappel-mat': p.sheet = { t: 'rappel-mat', id: +v }; break;
+    case 'mat-coche': {
+      const [idPlanning, idPoint] = v.split('|'), cle = p.profil + '|' + idPlanning, coches = SRV.preparation[cle] || [];
+      SRV.preparation[cle] = coches.includes(idPoint) ? coches.filter(x => x !== idPoint) : [...coches, idPoint];
+      break;
+    }
     case 'prog-new': go(p, { n: 'prog', f: { ch: null, bat: null, niv: null, logs: [], date: null, coulage: null, chefEq: null, comps: [] } }); break;
     case 'pg-ch': { const f = p.scr.f, c = chantier(v); Object.assign(f, { ch: v, bat: c.bats.length === 1 ? c.bats[0].nom : null, niv: null, logs: [] }); break; }
     case 'pg-bat': Object.assign(p.scr.f, { bat: v, niv: null, logs: [] }); break;
@@ -1509,6 +1522,10 @@ function act(p, a, v, ev) {
       toast(p, ecran.mode === 'ch' ? `${pluriel(nb, 'chantier')} ajouté(s) : structure provisoire à compléter` : `${pluriel(nb, 'plan')} récupéré(s) depuis Alobees`);
       break;
     }
+    case 'sheet-x': p.sheet = null; break;
+    case 'toast': toast(p, v); break;
+    case 'xlsx': toast(p, 'Maquette : le vrai fichier Excel sera généré au lot B'); break;
+    case 'export': toast(p, 'Maquette : export Excel du tableau de bord au lot D'); break;
     case 'notif': {
       const id = p.notif.ficheId, sh = p.notif.sheet; p.notif = null;
       if (sh) { p.sheet = sh; break; }
