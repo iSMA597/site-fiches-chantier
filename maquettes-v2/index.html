@@ -130,7 +130,8 @@ h3:first-child { margin-top: 2px; }
 .p-envoyee { background: var(--blue-bg); color: var(--blue); }
 .p-recue { background: var(--blue-bg); color: var(--blue); }
 .p-validee { background: var(--ok-bg); color: var(--ok); }
-.p-corriger { background: var(--yel-bg); color: var(--yel); }
+.p-corriger { background: var(--ko-bg); color: var(--ko); }
+.p-mem { background: var(--yel-bg); color: var(--yel); }
 .p-brouillon { background: var(--yel-bg); color: var(--yel); }
 .p-ko { background: var(--ko-bg); color: var(--ko); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -306,6 +307,26 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
 .login { padding: 30px 18px; display: flex; flex-direction: column; gap: 12px; max-width: 420px; margin: 0 auto; }
 .login img { width: 160px; margin: 10px auto 6px; }
 .login label { font-weight: 700; color: var(--navy); font-size: 14px; display: flex; flex-direction: column; gap: 5px; }
+/* 07/10 : système rouge, mémoire des erreurs, rappels, activation */
+.warnbox { background: var(--yel-bg); color: var(--yel); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin-bottom: 12px; }
+.warnbox b { color: #6B4500; }
+.tag-mem { display: inline-block; font-size: 11px; font-weight: 700; color: var(--yel); background: var(--yel-bg); border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+.pt.is-redo { border: 2px solid var(--ko); background: #FFF8F7; }
+.pt__redo { font-size: 12px; font-weight: 700; color: var(--ko); margin-bottom: 6px; }
+.steps button.redo { background: var(--ko); border-color: var(--ko); color: #fff; }
+.fixbar { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; color: #fff; background: var(--ko); }
+.fixbar.ok { background: var(--ok); }
+.fixbar button { border: 0; border-radius: 8px; background: #fff; color: var(--navy); font-weight: 700; padding: 5px 10px; font-size: 12.5px; }
+.pick { display: flex; width: 100%; text-align: left; gap: 8px; align-items: center; border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+.pick[aria-pressed="true"] { border-color: var(--ko); background: var(--ko-bg); color: var(--ko); font-weight: 700; }
+.prog { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--royal); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.rappel { width: 100%; text-align: left; background: #FFF8E6; border: 1px solid #F3D58A; border-left: 4px solid var(--gold); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; display: block; font-size: 13px; }
+.rappel strong { color: var(--navy); display: block; font-size: 14px; }
+.matlist { list-style: none; padding: 0; margin: 0 0 10px; font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+.sheet h5 { margin: 12px 0 6px; color: var(--navy); font-size: 13.5px; }
+.code6 { font-size: 32px; letter-spacing: 8px; font-weight: 700; color: var(--navy); text-align: center; }
+.qr { width: 150px; height: 150px; margin: 6px auto; display: block; }
+.ctl-sim { border: 2px solid var(--gold); background: #FFF8E6; border-radius: 10px; padding: 6px 12px; font-weight: 700; color: var(--navy); }
 </style>
 </head>
 <body>
@@ -337,6 +358,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
           <button data-format="pc" aria-pressed="false">PC</button>
         </div>
       </div>
+      <div class="ctl"><span>Rappels automatiques</span><button class="ctl-sim" id="ctl-veille">⏩ Simuler « la veille à 18 h »</button></div>
       <div class="ctl"><span>&nbsp;</span><button class="reset" id="ctl-reset">↺ Tout remettre à zéro</button></div>
     </div>
     <div class="stage" id="stage"></div>
@@ -350,7 +372,7 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <div class="flow__n" id="fn-c"><b>📱</b>Chef · équipe</div><div class="flow__a" id="fa-cs">➜</div>
         <div class="flow__n" id="fn-s"><b>☁</b>Serveur</div><div class="flow__a" id="fa-sp">➜</div>
         <div class="flow__n" id="fn-p"><b>💻</b>Conducteur · Patron</div>
-        <div class="flow__mail"><div class="flow__n" id="fn-f" style="width:60%"><b>✉</b>Facturation (Excel en pièce jointe)</div></div>
+        <div class="flow__mail" style="gap:6px"><div class="flow__n" id="fn-f" style="flex:1"><b>✉</b>Facturation (Excel)</div><div class="flow__n" id="fn-a" style="flex:1"><b>📁</b>Alobees (lecture seule + photos en option)</div></div>
       </div>
       <ol class="journal" id="journal" aria-live="polite"></ol>
     </section>
@@ -368,10 +390,23 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Équipe</b> : les compagnons et le chef d'équipe cochés à l'étape 3 reçoivent la fiche, puis sont prévenus quand elle est validée ou à corriger.</li>
         <li>✓ <b>Plan</b> visible depuis la fiche reçue, logements surlignés.</li>
         <li>✓ <b>Appareils</b> : iPhone, Android, tablettes (iPad et Android) et PC, avec le même lien. L'appli marche hors réseau et envoie dès que le réseau revient.</li>
+        <li>✓ <b>Le compagnon ne crée pas de fiche</b> : il reçoit celles de son équipe, avec le plan.</li>
+      </ol>
+      <h2 style="margin-top:14px">Décisions du 07/10 (à essayer)</h2>
+      <ol class="todo">
+        <li>✓ <b>Système rouge</b> : le conducteur touche les points à reprendre. La fiche revient en rouge, les carrés des étapes concernées sont rouges, « Corriger maintenant » emmène directement au premier point. <i>Essai : chef → « À corriger » sur F-0144.</i></li>
+        <li>✓ <b>Mémoire des erreurs</b> : un point oublié reste « à surveiller » sur le chantier jusqu'à <b>1 fiche sans faute</b> sur ce point. <i>Essai : nouvelle fiche sur les Tilleuls, étape 6.</i></li>
+        <li>✓ <b>Rappels de la veille à 18 h</b> : incorporation (matériel à préparer + points oubliés) et coulage (fiches pas encore validées). <i>Essai : bouton « Simuler la veille ».</i></li>
+        <li>✓ <b>Incorporations programmées</b> : le jour J, la fiche est pré-remplie.</li>
+        <li>✓ <b>Comptes</b> : le bureau crée la personne, donne un <b>code à 6 chiffres</b> (48 h, une seule fois). L'employé choisit lui-même son mot de passe, puis Face ID / empreinte (passkeys Supabase, en bêta). <i>Essai : Registre › Personnes, ou se déconnecter.</i></li>
+        <li>✓ <b>Plans</b> : par niveau <b>et</b> par logement (touchez un logement sur le plan).</li>
+        <li>✓ <b>Pas d'IA</b> : PDF texte et Excel lus gratuitement. Plans et chantiers récupérés depuis <b>Alobees en lecture seule</b>. Photos vers Alobees : option, si l'API le permet.</li>
       </ol>
       <h2 style="margin-top:14px">Reste à trancher</h2>
       <ol class="todo">
+        <li><b>Profil Facturation</b> : le supprimer ? L'Excel des fiches validées arrive déjà par mail.</li>
         <li><b>Le conducteur doit-il aussi signer</b> quand il valide ? (aujourd'hui : son nom + date + heure, sans dessin)</li>
+        <li><b>Test de la clé Alobees</b> : quelles rubriques sont lisibles (plans, documents, photos) ?</li>
       </ol>
     </section>
   </aside>
@@ -423,23 +458,31 @@ const PERSONNES = [
   ['Mehdi R.', 'Compagnon', 'mehdi.r'], ['Lucas P.', 'Compagnon', 'lucas.p'], ['Nadia F.', 'Facturation', 'nadia.f'],
 ];
 
-let SRV, DRAFTS, PHONES, MODE = 1, FORMAT = 'tel', CLOCK, SEQ;
+let SRV, DRAFTS, PHONES, MODE = 1, FORMAT = 'tel', CLOCK, SEQ, PSEQ, RSEQ;
 /* signature d'exemple pour les fiches déjà en base */
 const SIGN_DEMO = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 90"><path d="M15 60c20-40 35-45 40-20s10 30 25 0 20-30 30 5 15 25 35-10 25-20 40 10 30 15 60-5" fill="none" stroke="#27214E" stroke-width="3" stroke-linecap="round"/></svg>');
 
 function seed() {
-  CLOCK = 10 * 60 + 12; SEQ = 146;
+  CLOCK = 10 * 60 + 12; SEQ = 146; PSEQ = 1; RSEQ = 0;
   SRV = {
     chantiers: [
       { id: 'til', nom: 'Résidence Les Tilleuls', ville: 'Lille', adresse: '12 rue des Tilleuls, 59000 Lille', client: 'Promoteur EXEMPLE', dates: '09/2026 → 06/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [7, 10],
-        bats: [{ nom: 'Bât A', niv: [3, 4, 4, 4] }, { nom: 'Bât B', niv: [2, 3, 3, 4] }], plans: { 'Bât A|1': 'C', 'Bât A|2': 'C' }, equipe: ['Julien M.', 'Thomas L.', 'Karim B.', 'Mehdi R.'] },
+        bats: [{ nom: 'Bât A', niv: [3, 4, 4, 4] }, { nom: 'Bât B', niv: [2, 3, 3, 4] }], plans: { 'Bât A|1': 'C', 'Bât A|2': 'C', 'Bât B|1': 'B' }, equipe: ['Julien M.', 'Thomas L.', 'Karim B.', 'Mehdi R.'] },
       { id: 'jar', nom: 'Les Jardins du Parc', ville: 'Armentières', adresse: '3 allée du Parc, 59280 Armentières', client: 'Bailleur EXEMPLE', dates: '10/2026 → 09/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [15, 10],
-        bats: [{ nom: 'Bât 1', niv: [4, 4, 4, 4] }], plans: {}, equipe: ['Julien M.', 'Karim B.', 'Lucas P.'] },
+        bats: [{ nom: 'Bât 1', niv: [4, 4, 4, 4] }], plans: { 'Bât 1|1': 'A' }, equipe: ['Julien M.', 'Karim B.', 'Lucas P.'] },
       { id: 'clo', nom: 'Le Clos Saint-Jean', ville: 'Lomme', adresse: '8 rue Saint-Jean, 59160 Lomme', client: 'Promoteur EXEMPLE 2', dates: '06/2026 → 03/2027', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [22, 10],
         bats: [{ nom: 'Bât A', niv: [5, 5, 5] }], plans: { 'Bât A|0': 'B' }, equipe: ['Mehdi R.', 'Lucas P.'] },
     ],
     fiches: [],
     log: [],
+    /* incorporations programmées (rappel la veille, fiche pré-remplie le jour J) */
+    planning: [{ id: 1, ch: 'jar', bat: 'Bât 1', niv: 2, logs: ['021', '022', '023', '024'], date: '07/10/2026', coulage: '15/10/2026', chef: 'Julien M.', chefEq: 'Thomas L.', comps: ['Karim B.', 'Lucas P.'] }],
+    rappels: [],
+    personnes: PERSONNES.map(x => x.slice()),
+    /* état des comptes : actif, bio (Face ID / empreinte) ou { code } en attente d'activation */
+    comptes: Object.assign(Object.fromEntries(PERSONNES.map(x => [x[0], 'actif'])), { 'Karim B.': 'bio', 'Lucas P.': { code: '482913' } }),
+    /* ce que la passerelle Alobees (lecture seule) trouverait */
+    alobees: { chantiers: [['Résidence Les Tilleuls', 'Lille', true], ['Les Jardins du Parc', 'Armentières', true], ['Le Clos Saint-Jean', 'Lomme', true], ['Résidence Le Moulin', 'Wambrechies', false]] },
   };
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
     id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, 
@@ -447,15 +490,15 @@ function seed() {
     rep: Object.fromEntries(ALL_ITEMS.map(([id]) => [id, ko.includes(id) ? 'ko' : 'ok'])), notes: {}, photos: [], nbPhotosDemo: 3, obs: '', excel: false, sign: SIGN_DEMO, signeLe: null,
     vu: {}, histo: [['Envoyée', '02/10 16:40']], valideur: null, motif: null,
   }, extra || {}));
-  SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
   mk(131, 'til', 'Bât A', 0, ['001', '002', '003'], 'validee', 'Julien M.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '28/09 17:05'], ['Validée par Sophie D.', '29/09 08:12']] });
   mk(133, 'til', 'Bât A', 1, ['011', '012', '013', '014'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '30/09 16:20'], ['Validée par Sophie D.', '01/10 07:55']] });
   mk(135, 'til', 'Bât B', 0, ['001', '002'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', histo: [['Envoyée', '01/10 15:10'], ['Validée par Sophie D.', '02/10 08:30']] });
   mk(138, 'clo', 'Bât A', 0, ['001', '002', '003', '004', '005'], 'validee', 'Antoine C.', [], { vu: { conducteur: 1, patron: 1, chef: 1, facturation: 1 }, valideur: 'Sophie D.', coulage: '03/10/2026' });
   mk(140, 'jar', 'Bât 1', 0, ['001', '002'], 'validee', 'Julien M.', [], { vu: { conducteur: 1, patron: 1, chef: 1 }, valideur: 'Direction (conducteur absent)', coulage: '15/10/2026' });
   mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Julien M.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
-  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', [], { histo: [['Envoyée', '05/10 09:58']] });
-  mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Julien M.', [], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, motif: 'Photo manquante : ajouter les photos des nourrices', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
+  mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', ['c9'], { notes: { c9: 'Bouchon manquant sur une attente du 021' }, histo: [['Envoyée', '05/10 09:58']] });
+  mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Julien M.', ['c3'], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, notes: { c3: 'Nourrice décalée de 20 cm au 012' }, flag: ['c3', 'c6'], fautes: ['c3', 'c6'], demandeur: 'Sophie D.', flagNote: 'Reprendre la nourrice du 012 et recoter les sorties', motif: '2 points à corriger · Photo manquante', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
+  SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
   DRAFTS = {};
 }
 
@@ -485,6 +528,56 @@ const ICON = {
   tdb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   reg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
 };
+
+const secOf = id => SECS.find(x => x.items.some(([i]) => i === id));
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+const dateDemain = () => fmtD(new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + 1)) + '/2026';
+/* Mémoire des erreurs : un point oublié reste « à surveiller » sur le chantier
+   jusqu'à une fiche sans faute sur ce point (décision du 07/10 : 1 fiche suffit) */
+function memoire(chId) {
+  const fs = SRV.fiches.filter(f => f.ch === chId && f.statut !== 'attente').sort((a, b) => a.id - b.id);
+  const out = [];
+  ALL_ITEMS.forEach(([id, l]) => {
+    let n = 0;
+    /* une faute reste une faute même si elle a été corrigée ensuite sur la même fiche */
+    fs.forEach(f => { if (f.rep[id] === 'ko' || (f.fautes || []).includes(id)) n++; else if (f.rep[id] === 'ok') n = 0; });
+    if (n) out.push({ id, l, n });
+  });
+  return out;
+}
+const memHtml = mem => mem.map(m => `<li>${h(m.l)} <span class="tag-mem">oublié ${m.n}×</span></li>`).join('');
+const memBox = (mem, titre) => mem.length ? `<div class="warnbox"><b>⚠ ${titre}</b><ul style="margin:6px 0 0;padding-left:18px">${memHtml(mem)}</ul></div>` : '';
+function planningPour(profil) {
+  const nom = PROFILS[profil].nom;
+  if (profil === 'facturation') return [];
+  return SRV.planning.filter(x => { const c = chantier(x.ch); return profil === 'patron' || c.conducteur === nom || c.chef === nom || x.chef === nom || x.chefEq === nom || x.comps.includes(nom); });
+}
+const code6 = () => String(Math.floor(100000 + Math.random() * 900000));
+/* faux QR code (maquette) : motif stable dérivé du code */
+function qrSvg(graine) {
+  let r = [...graine].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rnd = () => (r = (r * 1103515245 + 12345) >>> 0) / 4294967296;
+  let cells = '';
+  for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) {
+    const finder = (x < 7 && y < 7) || (x > 13 && y < 7) || (x < 7 && y > 13);
+    const ax = x > 13 ? x - 14 : x, ay = y > 13 ? y - 14 : y;
+    const on = finder ? (ax === 0 || ax === 6 || ay === 0 || ay === 6 || (ax >= 2 && ax <= 4 && ay >= 2 && ay <= 4)) : rnd() > .5;
+    if (on) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  }
+  return `<svg class="qr" viewBox="-1 -1 23 23" role="img" aria-label="QR code d'activation (exemple)"><rect x="-1" y="-1" width="23" height="23" fill="#fff"/><g fill="#27214E">${cells}</g></svg>`;
+}
+/* plan d'un logement (maquette) : pièces + sorties EF / ECS / chauffage */
+function planLogSvg(cd) {
+  const room = (x, y, w, hh, l) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="#fff" stroke="#27214E" stroke-width="2"/><text x="${x + 6}" y="${y + 16}" font-size="11" fill="#5F5E75">${l}</text>`;
+  const pt = (x, y, l, c) => `<circle cx="${x}" cy="${y}" r="9" fill="${c}"/><text x="${x}" y="${y + 3.5}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff">${l}</text>`;
+  const rad = (x, y) => `<rect x="${x}" y="${y}" width="34" height="8" rx="2" fill="#B76E00"/><text x="${x + 17}" y="${y - 3}" text-anchor="middle" font-size="8" fill="#B76E00">CH</text>`;
+  return `<svg viewBox="0 0 340 240" role="img" aria-label="Plan schématique du logement ${cd}">
+    ${room(10, 20, 190, 120, 'Séjour')}${room(200, 20, 130, 75, 'Cuisine')}${room(200, 95, 70, 45, 'SDB')}${room(270, 95, 60, 45, 'WC')}${room(10, 140, 160, 90, 'Chambre 1')}${room(170, 140, 160, 90, 'Chambre 2')}
+    <text x="10" y="13" font-size="11" font-weight="700" fill="#27214E">Logement ${cd}</text>
+    ${pt(222, 70, 'EF', '#1D5FD1')}${pt(244, 70, 'ECS', '#B42318')}${pt(214, 124, 'EF', '#1D5FD1')}${pt(236, 124, 'ECS', '#B42318')}${pt(300, 124, 'EF', '#1D5FD1')}
+    <rect x="252" y="100" width="12" height="12" fill="#27214E"/><text x="258" y="122" text-anchor="middle" font-size="7" fill="#27214E">N</text>
+    ${rad(30, 126)}${rad(30, 216)}${rad(190, 216)}</svg>`;
+}
 
 /* Qui reçoit quoi (§ 3 de CONCEPTION_V2) */
 function recuesPour(profil) {
@@ -522,7 +615,7 @@ function etatLogement(chId, bat, niv, c) {
   if (f) {
     if (f.statut === 'validee') return 'vert';
     if (aControler(f)) return nbKo(f) ? 'rouge' : 'bleu';
-    return 'jaune';
+    return f.statut === 'corriger' ? 'rouge' : 'jaune';
   }
   const enCours = Object.values(DRAFTS).some(d => d && d.ch === chId && d.bat === bat && d.niv === niv && d.logs.includes(c));
   return enCours ? 'jaune' : 'gris';
@@ -533,7 +626,7 @@ function statsChantier(c) {
   c.bats.forEach(b => b.niv.forEach((nb, n) => { for (let i = 1; i <= nb; i++) { out.total++; out[etatLogement(c.id, b.nom, n, code(n, i))]++; } }));
   const fs = SRV.fiches.filter(f => f.ch === c.id);
   out.aCtrl = fs.filter(aControler).length;
-  out.ano = fs.filter(f => aControler(f) && nbKo(f)).length;
+  out.ano = fs.filter(f => (aControler(f) && nbKo(f)) || f.statut === 'corriger').length;
   return out;
 }
 
@@ -542,10 +635,10 @@ function log(de, vers, txt, type) {
   SRV.log.push({ t: now(), de, vers, txt, type: type || '' });
   renderJournal(de, vers);
 }
-function notify(profils, title, body, ficheId) {
+function notify(profils, title, body, ficheId, sheet) {
   PHONES.forEach(p => {
     if (profils.includes(p.profil) && p.online && !p.loggedOut) {
-      p.notif = { title, body, ficheId };
+      p.notif = { title, body, ficheId, sheet };
       clearTimeout(p._nt); p._nt = setTimeout(() => { p.notif = null; renderAll(); }, 7000);
     }
   });
@@ -570,6 +663,7 @@ function transmettre(f, correction) {
   setTimeout(() => {
     const c = chantier(f.ch);
     log('Serveur', 'Conducteur · Patron · Chef', `🔔 Notification « Nouvelle fiche : ${c.nom}, ${f.bat} ${nivL(f.niv)} » + badge`, 't-notif');
+    if (f.alobees && f.photos.length) log('Serveur', 'Alobees', `📷 ${pluriel(f.photos.length, 'photo')} de ${f.num} déposée(s) dans Alobees › ${c.nom} (option)`, 't-mail');
     const bureau = destinataires(f);
     notify(bureau, 'Nouvelle fiche ' + f.num, `${c.nom} · ${lieu(f)}${nbKo(f) ? ' · ⚠ ' + nbKo(f) + ' anomalie' : ''}`, f.id);
     const eq = profilsDe(equipe(f)).filter(k => !bureau.includes(k) && PROFILS[k].nom !== f.auteur);
@@ -600,7 +694,7 @@ function setTab(p, t) { p.tab = t; p.scr = { n: 'home' }; p.hist = []; p.sheet =
 /* ============================ brouillon / étapes ============================ */
 function newDraft(p) {
   const pr = P(p);
-  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: p.profil === 'compagnon' ? [pr.nom] : [], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, sign: null, step: 1, visited: 1, fixOf: null };
+  return { ch: null, bat: null, niv: null, logs: [], date: fmtD(AUJ) + '/2026', coulage: null, chef: null, chefEq: null, comps: p.profil === 'compagnon' ? [pr.nom] : [], rep: {}, notes: {}, photos: [], obs: '', lu: false, excel: false, sign: null, alobees: false, flag: [], step: 1, visited: 1, fixOf: null };
 }
 function stepOk(d, n) {
   switch (n) {
@@ -629,7 +723,8 @@ function renderPhone(p, el) {
   if (!el) return;
   const ae = document.activeElement, focusSel = el.contains(ae) && ae.dataset && ae.dataset.a ? `[data-a="${ae.dataset.a}"]${ae.dataset.v !== undefined ? `[data-v="${CSS.escape(ae.dataset.v)}"]` : ''}` : null;
   const mainOld = el.querySelector('.main');
-  const key = p.tab + '|' + JSON.stringify(p.scr) + '|' + (DRAFTS[p.profil]?.step || '');
+  const key = p.tab + '|' + p.scr.n + '|' + (p.scr.id ?? '') + '|' + (DRAFTS[p.profil]?.step || '');
+  const sheetOld = el.querySelector('.sheet'), sheetTop = sheetOld ? sheetOld.scrollTop : 0;
   if (mainOld && p._key) p.scroll[p._key] = mainOld.scrollTop;
   const pr = P(p);
   if (!pr.tabs.includes(p.tab)) setTab(p, 'inc');
@@ -648,6 +743,9 @@ function renderPhone(p, el) {
   const mainNew = el.querySelector('.main');
   if (mainNew && p.scroll[key] != null && key === p._key) mainNew.scrollTop = p.scroll[key];
   p._key = key;
+  const sk = p.sheet ? p.sheet.t + '|' + (p.sheet.id ?? '') : null, sheetNew = el.querySelector('.sheet');
+  if (sheetNew && sk === p._sheetKey) sheetNew.scrollTop = sheetTop;
+  p._sheetKey = sk;
   setupSign(p, el);
   // garde le focus clavier sur le même bouton après le re-rendu
   const target = (focusSel && el.querySelector(focusSel)) || (focusSel && el.querySelector('.sheet .x'));
@@ -688,6 +786,7 @@ function viewTab(p) {
   let title = 'Incorporation', sub = pr.nom + ' · ' + pr.role, content, back = p.hist.length > 0;
   if (s.n === 'sent') { title = 'Fiche envoyée'; content = viewSent(p); back = false; }
   else if (s.n === 'fiche') { const f = fiche(s.id); title = 'Fiche ' + f.num; sub = chantier(f.ch).nom; content = viewFiche(p, f); }
+  else if (s.n === 'prog') { title = 'Programmer'; sub = 'Une incorporation à venir'; content = viewProg(p); }
   else if (p.tab === 'inc') { content = viewIncHome(p); }
   else if (p.tab === 'tdb') {
     title = 'Tableau de bord'; sub = 'Incorporations avant coulage';
@@ -697,6 +796,7 @@ function viewTab(p) {
     title = 'Registre'; sub = pr.registre === 'admin' ? 'Administration' : 'Lecture · vos chantiers modifiables';
     if (s.n === 'reg-ch') { content = viewRegChantier(p, chantier(s.id)); sub = chantier(s.id).nom; }
     else if (s.n === 'reg-import') { content = viewImport(p, chantier(s.id), s); title = 'Importer'; sub = chantier(s.id).nom; }
+    else if (s.n === 'reg-alob') { content = viewAlob(p, s); title = 'Alobees'; sub = s.mode === 'ch' ? 'Importer des chantiers' : chantier(s.id).nom + ' · plans'; }
     else content = viewReg(p);
   }
   return topbar(p, title, sub, back) + `<div class="main"><div class="main__in">${content}</div></div>` + tabbar(p);
@@ -707,11 +807,20 @@ function viewIncHome(p) {
   const pr = P(p), d = DRAFTS[p.profil];
   if (!p.seg) p.seg = pr.recues && !pr.nouvelle ? 'recues' : (pr.recues && pr.valide ? 'recues' : 'mes');
   let out = '';
+  const rs = SRV.rappels.filter(r => r.profils.includes(p.profil)).slice(-3).reverse();
+  if (rs.length) out += `<h3>🔔 Rappels</h3>${rs.map(r => `<button class="rappel" data-a="rappel-open" data-v="${r.id}"><strong>${h(r.title)}</strong>${h(r.body)}</button>`).join('')}`;
+  const aCorr = mesFiches(p.profil).filter(f => f.statut === 'corriger' && f.auteur === pr.nom);
+  if (aCorr.length) out += `<div class="redbox"><h4>↩ ${pluriel(aCorr.length, 'fiche')} à corriger</h4>${aCorr.map(f => `<button class="btn btn--block" style="background:var(--ko);color:#fff;margin-top:6px" data-a="open" data-v="${f.id}">${f.num} · ${h(chantier(f.ch).nom)} · ${pluriel((f.flag || []).length, 'point')} ›</button>`).join('')}</div>`;
   if (pr.nouvelle) {
     out += d
       ? `<button class="btn btn--gold btn--big" data-a="resume">▶ Reprendre ma fiche en cours<br></button><p class="muted" style="margin:6px 0 4px;text-align:center">Brouillon : étape ${d.step}/8 · ${d.ch ? h(chantier(d.ch).nom) : 'chantier à choisir'} · gardé sur le téléphone</p>
          <button class="link" data-a="discard" style="display:block;margin:0 auto 10px">Abandonner ce brouillon</button>`
       : `<button class="btn btn--gold btn--big" data-a="new">＋ Nouvelle fiche d'incorporation</button><div style="height:14px"></div>`;
+  }
+  const pl = planningPour(p.profil);
+  if (pl.length || pr.nouvelle) {
+    out += `<h3>📅 Incorporations programmées</h3>${pl.length ? pl.map(x => cardProg(p, x)).join('') : '<p class="muted">Aucune pour l\'instant.</p>'}`;
+    if (pr.nouvelle) out += '<button class="btn btn--ghost btn--block" data-a="prog-new" style="margin-bottom:6px">＋ Programmer une incorporation</button>';
   }
   const b = badgeFor(p.profil);
   if (pr.recues && pr.nouvelle) {
@@ -734,13 +843,39 @@ function viewIncHome(p) {
   }
   return out;
 }
+function cardProg(p, x) {
+  const c = chantier(x.ch), demain = x.date === dateDemain();
+  return `<div class="prog"><strong style="color:var(--navy)">${demain ? 'Demain' : 'Le ' + x.date.slice(0, 5)} · ${h(c.nom)}</strong>
+    <div class="muted">${h(x.bat)} · ${nivL(x.niv)} · ${x.logs.join(' ')} · coulage ${x.coulage.slice(0, 5)}</div>
+    <div class="muted">Équipe : ${h([x.chef, x.chefEq, ...x.comps].filter(Boolean).join(', '))}</div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn--sm btn--ghost" data-a="rappel-mat" data-v="${x.id}">🧰 Matériel à préparer</button>
+    ${P(p).nouvelle ? `<button class="btn btn--sm btn--primary" data-a="prog-start" data-v="${x.id}">▶ Démarrer la fiche</button>` : ''}</div></div>`;
+}
+const field = (l, inner) => `<div class="field"><div class="field__l">${l}</div><div class="chips">${inner}</div></div>`;
+function viewProg(p) {
+  const f = p.scr.f, c = f.ch && chantier(f.ch), b = c && c.bats.find(x => x.nom === f.bat);
+  const jours = ks => ks.map(k => new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + k));
+  const chip = (a, v, on, l, dis) => `<button class="chip" data-a="${a}" data-v="${h(v)}" aria-pressed="${on}" ${dis ? 'disabled' : ''}>${h(l || v)}</button>`;
+  const pers = r => SRV.personnes.filter(x => x[1] === r).map(x => x[0]);
+  let out = '<p class="lead">La veille à 18 h, l\'équipe reçoit un rappel : matériel à préparer et points souvent oubliés sur ce chantier. Le jour J, la fiche est déjà pré-remplie.</p>';
+  out += field('Chantier', SRV.chantiers.map(x => chip('pg-ch', x.id, f.ch === x.id, x.nom)).join(''));
+  if (c) out += field('Bâtiment', c.bats.map(x => chip('pg-bat', x.nom, f.bat === x.nom)).join(''));
+  if (b) out += field('Niveau', b.niv.map((_, n) => chip('pg-niv', n, f.niv === n, nivL(n))).join(''));
+  if (b && f.niv !== null) out += field('Logements <small>6 max</small>', Array.from({ length: b.niv[f.niv] }, (_, i) => { const cd = code(f.niv, i + 1); return chip('pg-log', cd, f.logs.includes(cd), cd, !f.logs.includes(cd) && f.logs.length >= 6); }).join(''));
+  out += field("Date de l'incorporation", jours([1, 2, 3, 4, 7]).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pg-date', v, f.date === v, jour(dt) + ' ' + fmtD(dt)); }).join(''));
+  out += field('Coulage prévu', jours([2, 3, 4, 7, 9]).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pg-coul', v, f.coulage === v, jour(dt) + ' ' + fmtD(dt)); }).join(''));
+  out += field("Chef d'équipe <small>facultatif</small>", pers("Chef d'équipe").map(x => chip('pg-chefeq', x, f.chefEq === x)).join(''));
+  out += field('Compagnons', pers('Compagnon').map(x => chip('pg-comp', x, f.comps.includes(x))).join(''));
+  const ok = f.ch && f.bat && f.niv !== null && f.logs.length && f.date && f.coulage && f.comps.length;
+  return out + `${ok ? '' : '<p class="foot__hint">Complétez le chantier, l\'emplacement, les dates et au moins 1 compagnon</p>'}<button class="btn btn--primary btn--big" data-a="pg-save" ${ok ? '' : 'disabled'}>📅 Programmer</button>`;
+}
 function rowFiche(p, f, recue) {
   const c = chantier(f.ch), isNew = recue && !f.vu[p.profil];
   return `<button class="row-btn" data-a="open" data-v="${f.id}">
     ${isNew ? '<span class="dot-new" aria-label="Nouvelle"></span>' : ''}
     <div class="row-btn__main"><strong>${h(c.nom)}</strong><span>${h(lieu(f))}</span>
     <span>${f.num} · coulage ${f.coulage.slice(0, 5)}${recue ? ' · par ' + h(f.auteur) : ''}</span>
-    <span style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${pill(f)}${nbKo(f) ? `<span class="pill p-ko">⚠ ${nbKo(f)} anomalie</span>` : ''}</span></div>
+    <span style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">${pill(f)}${f.statut === 'corriger' && (f.flag || []).length ? `<span class="pill p-ko">↩ ${pluriel(f.flag.length, 'point')}</span>` : nbKo(f) ? `<span class="pill p-ko">⚠ ${nbKo(f)} anomalie</span>` : ''}</span></div>
     <span class="chev" aria-hidden="true">›</span></button>`;
 }
 
@@ -753,17 +888,23 @@ function viewFiche(p, f) {
   let out = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">${pill(f)}${kos.length ? `<span class="pill p-ko">⚠ ${kos.length} anomalie</span>` : ''}</div>
     <div class="track" aria-label="Suivi de la fiche">${steps.map(([l, on], i) => `<div class="track__s ${on ? 'on' : ''} ${i === 2 && st === 'corriger' ? 'warn' : ''}">${l}</div>`).join('')}</div>`;
   if (st === 'attente') out += '<div class="info">📵 Pas de réseau : la fiche est gardée sur le téléphone. Elle partira toute seule dès que le réseau revient.</div>';
-  if (st === 'corriger') out += `<div class="alert">↩ À corriger : ${h(f.motif)}</div>`;
+  if (st === 'corriger') {
+    const fl = f.flag || [];
+    out += `<div class="redbox"><h4>↩ À corriger (demandé par ${h(f.demandeur || 'le conducteur')})</h4>
+      ${fl.length ? `<ul>${fl.map(id => `<li><b>${h(ITEM_LABEL[id])}</b> · étape ${secOf(id).n} ${secOf(id).titre}${f.notes[id] ? ` · <i>${h(f.notes[id])}</i>` : ''}</li>`).join('')}</ul>` : ''}
+      ${f.flagNote ? `<p style="margin:0 0 10px;font-size:13.5px">« ${h(f.flagNote)} »</p>` : ''}${f.motif && !fl.length ? `<p style="margin:0 0 10px">${h(f.motif)}</p>` : ''}
+      ${f.auteur === pr.nom ? `<button class="btn btn--big" style="background:var(--ko);color:#fff" data-a="reprendre" data-v="${f.id}">Corriger maintenant ›</button>` : `<p class="muted" style="margin:0">${h(f.auteur)} doit corriger, puis renvoyer la fiche.</p>`}</div>`;
+  }
   out += `<div class="card"><dl class="kv">
     <dt>Chantier</dt><dd>${h(c.nom)}</dd><dt>Emplacement</dt><dd>${h(lieu(f))}</dd>
     <dt>Incorporation</dt><dd>${h(f.date)}</dd><dt>Coulage prévu</dt><dd>${h(f.coulage)}</dd>
     <dt>Chef de chantier</dt><dd>${h(f.chef)}</dd><dt>Équipe</dt><dd>${h([f.chefEq, ...f.comps].filter(Boolean).join(', '))}</dd>
     <dt>Rempli par</dt><dd>${h(f.auteur)}</dd></dl>
-    ${c.plans[f.bat + '|' + f.niv] ? `<button class="btn btn--ghost btn--block" style="margin-top:10px" data-a="plan-fiche" data-v="${f.id}">🗺 Voir le plan de ce niveau</button>` : ''}</div>`;
+    ${c.plans[f.bat + '|' + f.niv] ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px"><button class="btn btn--sm btn--ghost" data-a="plan-fiche" data-v="${f.id}">🗺 Plan du niveau</button>${f.logs.map(cd => `<button class="btn btn--sm btn--ghost" data-a="plan-fiche-log" data-v="${f.id}|${cd}">🏠 ${cd}</button>`).join('')}</div>` : ''}</div>`;
   if (kos.length) out += `<h3 style="color:var(--ko)">Anomalies signalées</h3><div class="alert" style="font-weight:400">${kos.map(([id, l]) => `<div style="margin-bottom:4px"><b>✗ ${h(l)}</b>${f.notes[id] ? `<br><i>« ${h(f.notes[id])} »</i>` : ''}</div>`).join('')}</div>`;
   out += '<h3>Réponses</h3>' + SECS.map(s => {
     const n = s.items.length, ok = s.items.filter(([id]) => f.rep[id] === 'ok').length;
-    return `<details class="sec"><summary><span>${s.titre}</span><span>${ok}/${n} ✓</span></summary><ul>${s.items.map(([id, l]) => `<li>${f.rep[id] === 'ko' ? '<span class="r-ko">✗</span>' : '<span class="r-ok">✓</span>'}${h(l)}</li>`).join('')}</ul></details>`;
+    return `<details class="sec"><summary><span>${s.titre}</span><span>${ok}/${n} ✓</span></summary><ul>${s.items.map(([id, l]) => `<li>${f.rep[id] === 'ko' ? '<span class="r-ko">✗</span>' : '<span class="r-ok">✓</span>'}${h(l)}${st === 'corriger' && (f.flag || []).includes(id) ? ' <b style="color:var(--ko)">↩ à corriger</b>' : ''}</li>`).join('')}</ul></details>`;
   }).join('');
   const nph = f.photos.length || f.nbPhotosDemo;
   out += `<h3>Photos (${nph})</h3>` + (nph ? `<div class="ph-grid">${f.photos.length ? f.photos.map(ph => `<div class="ph"><img src="${ph.src}" alt="Photo jointe"></div>`).join('') : Array.from({ length: nph }, (_, i) => `<div class="ph">photo ${i + 1}<br>(exemple)</div>`).join('')}</div>` : '<p class="muted">Aucune photo jointe.</p>');
@@ -783,8 +924,6 @@ function viewFiche(p, f) {
     if (pr.valide === 'absence') act += '<p class="muted" style="text-align:center;margin:0">Normalement validée par le conducteur. Possible ici s\'il est absent.</p>';
   } else if (aControler(f) && pr.recues === 'chef') {
     act += '<div class="info">Consultation seule : la validation est faite par le conducteur de travaux.</div>';
-  } else if (st === 'corriger' && f.auteur === pr.nom) {
-    act += `<button class="btn btn--gold btn--big" data-a="reprendre" data-v="${f.id}">✎ Corriger et renvoyer</button>`;
   }
   return out + (act ? `<div class="actions">${act}</div>` : '');
 }
@@ -809,14 +948,20 @@ function viewFicheTrackOnly(f) {
 /* ---------- Assistant 8 étapes ---------- */
 function viewWizard(p) {
   const d = DRAFTS[p.profil], n = d.step;
+  const redo = k => k >= 4 && k <= 6 && SECS[k - 4].items.some(([id]) => d.flag.includes(id) && !d.rep[id]);
   const squares = STEPS.map((l, i) => {
     const k = i + 1, reach = canReach(d, k) && (k <= d.visited || stepOk(d, k - 1));
-    return `<button data-a="step" data-v="${k}" class="${stepOk(d, k) ? 'done' : ''}" ${k === n ? 'aria-current="step"' : ''} ${reach ? '' : 'disabled'} aria-label="Étape ${k} : ${l}${stepOk(d, k) ? ' (faite)' : ''}" title="${l}">${k}<span>${l}</span></button>`;
+    const etat = redo(k) ? ' (à corriger)' : stepOk(d, k) ? ' (faite)' : '';
+    return `<button data-a="step" data-v="${k}" class="${redo(k) ? 'redo' : stepOk(d, k) ? 'done' : ''}" ${k === n ? 'aria-current="step"' : ''} ${reach ? '' : 'disabled'} aria-label="Étape ${k} : ${l}${etat}" title="${l}">${k}<span>${l}</span></button>`;
   }).join('');
+  const reste = d.flag.filter(id => !d.rep[id]).length;
+  const fixbar = !d.fixOf ? '' : reste
+    ? `<div class="fixbar" role="status"><span>↩ ${pluriel(reste, 'point')} à corriger</span><button data-a="goto-fix">Aller au point ›</button></div>`
+    : `<div class="fixbar ok" role="status"><span>✓ Tous les points sont corrigés</span>${n < 8 ? '<button data-a="goto-fix">Signer et renvoyer ›</button>' : ''}</div>`;
   const top = `<div class="top"><button class="top__back" data-a="quit" aria-label="Quitter (le brouillon est gardé)">✕</button>
     <div class="top__t"><strong>${d.fixOf ? 'Correction ' + fiche(d.fixOf).num : 'Nouvelle fiche'}</strong><span>Étape ${n}/8 · ${STEPS[n - 1]}</span></div>
     <button class="avatar" data-a="me" aria-label="Mon compte">${initials(P(p).nom)}</button></div>
-    <nav class="steps" aria-label="Étapes de la fiche">${squares}</nav>`;
+    <nav class="steps" aria-label="Étapes de la fiche">${squares}</nav>${fixbar}`;
   const views = [null, stepChantier, stepEmplacement, stepEquipe, stepPoints, stepPoints, stepPoints, stepPhotos, stepEnvoi];
   const content = views[n](p, d, n);
   let foot = '';
@@ -851,9 +996,9 @@ function stepEmplacement(p, d) {
 function stepEquipe(p, d) {
   const c = chantier(d.ch);
   const days = [0, 1, 2, 3, 4, 7].map(k => new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + k));
-  const chefs = PERSONNES.filter(x => x[1] === 'Chef de chantier').map(x => x[0]);
-  const chefsEq = PERSONNES.filter(x => x[1] === "Chef d'équipe").map(x => x[0]);
-  const comps = PERSONNES.filter(x => x[1] === 'Compagnon').map(x => x[0]);
+  const chefs = SRV.personnes.filter(x => x[1] === 'Chef de chantier').map(x => x[0]);
+  const chefsEq = SRV.personnes.filter(x => x[1] === "Chef d'équipe").map(x => x[0]);
+  const comps = SRV.personnes.filter(x => x[1] === 'Compagnon').map(x => x[0]);
   const chip = (a, v, on, l) => `<button class="chip" data-a="${a}" data-v="${h(v)}" aria-pressed="${on}">${h(l || v)}</button>`;
   return `<div class="field"><div class="field__l">Date de l'incorporation</div><div class="chips">${chip('noop', '', true, "Aujourd'hui " + fmtD(AUJ))}</div></div>
     <div class="field"><div class="field__l">Coulage prévu</div><div class="chips">${days.slice(1).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pick-coul', v, d.coulage === v, jour(dt) + ' ' + fmtD(dt)); }).join('')}</div>
@@ -865,12 +1010,16 @@ function stepEquipe(p, d) {
 function stepPoints(p, d, n) {
   const s = SECS[n - 4], done = s.items.filter(([id]) => d.rep[id]).length, ko = s.items.filter(([id]) => d.rep[id] === 'ko').length;
   let out = s.alerte ? `<div class="alert">⚠ ${h(s.alerte)}</div>` : '';
+  const mem = memoire(d.ch).filter(m => s.items.some(([id]) => id === m.id));
+  out += memBox(mem, 'Déjà oublié sur ce chantier : faites-y attention');
+  if (d.fixOf && d.flag.length && fiche(d.fixOf).flagNote) out += `<div class="alert" style="font-weight:400">↩ <b>${h(fiche(d.fixOf).demandeur || 'Le conducteur')}</b> : « ${h(fiche(d.fixOf).flagNote)} »</div>`;
   out += `<div class="pt-head"><div class="counter">${done}/${s.items.length} points<small>${h(s.long)}${ko ? ` · <b style="color:var(--ko)">${ko} anomalie${ko > 1 ? 's' : ''}</b>` : ''}</small></div>
     <button class="btn btn--sm btn--ok" data-a="all-ok" data-v="${n}">✓ Tout fait</button>
     <button class="qbtn" data-a="guide" data-v="${n}" aria-label="Guide : ${h(s.titre)}">?</button></div>`;
   out += s.items.map(([id, l]) => {
-    const r = d.rep[id];
-    return `<div class="pt ${r === 'ok' ? 'is-ok' : r === 'ko' ? 'is-ko' : ''}"><div class="pt__l" id="l-${p.id}-${id}">${h(l)}</div>
+    const r = d.rep[id], m = mem.find(x => x.id === id), fl = d.flag.includes(id), attente = fl && !r;
+    const avant = attente ? `<div class="pt__redo">↩ À corriger${d.notes[id] ? ' : ' + h(d.notes[id]) : ''}</div>` : fl ? '<div class="pt__redo" style="color:var(--ok)">✓ Corrigé</div>' : '';
+    return `<div class="pt ${attente ? 'is-redo' : r === 'ok' ? 'is-ok' : r === 'ko' ? 'is-ko' : ''}">${avant}<div class="pt__l" id="l-${p.id}-${id}">${h(l)}${m ? ` <span class="tag-mem">⚠ oublié ${m.n}×</span>` : ''}</div>
       <div class="pt__b" role="group" aria-labelledby="l-${p.id}-${id}">
         <button class="b-ok" data-a="rep" data-v="${id}|ok" aria-pressed="${r === 'ok'}">✓ Fait</button>
         <button class="b-ko" data-a="rep" data-v="${id}|ko" aria-pressed="${r === 'ko'}">✗ Anomalie</button></div>
@@ -887,6 +1036,7 @@ function stepPhotos(p, d) {
     </div>
     <div class="field__l">Photos jointes <small>${d.photos.length}/10</small></div>
     ${d.photos.length ? `<div class="ph-grid">${d.photos.map((ph, i) => `<div class="ph"><img src="${ph.src}" alt="Photo ${i + 1}"><span class="ph__kb">${ph.avant} → ${ph.kb} Ko</span><button class="ph__x" data-a="ph-del" data-v="${i}" aria-label="Retirer la photo ${i + 1}">✕</button></div>`).join('')}</div>` : '<p class="empty" style="border:2px dashed var(--line);border-radius:12px">Aucune photo pour l\'instant</p>'}
+    <label class="check check--small" style="margin-top:8px"><input type="checkbox" data-a="ph-alob" ${d.alobees ? 'checked' : ''} ${d.photos.length ? '' : 'disabled'}><span>Envoyer aussi ces photos dans Alobees<small>Option · dans le dossier du chantier · seulement si l'API Alobees le permet (à confirmer)</small></span></label>
     <div class="info" style="margin-top:14px"><b>📸 Photos Alobees toujours obligatoires avant coulage</b>
       <ul style="margin:6px 0 0;padding-left:18px;font-size:13px">${ALOBEES.map(x => `<li>${h(x)}</li>`).join('')}</ul></div>`;
 }
@@ -929,7 +1079,7 @@ function viewTdb(p) {
     return `<button class="ch-card" data-a="tdb-ch" data-v="${c.id}"><div class="ch-card__t"><span>${h(c.nom)}</span><span>${pct} %</span></div>
       <div class="bar" aria-label="${pct} % validés">${['vert', 'bleu', 'rouge', 'jaune'].map(seg).join('')}</div>
       <div class="ch-card__m"><span>Prochain coulage : <b style="color:${j <= 2 ? 'var(--ko)' : 'var(--navy)'}">${pad(c.coulage[0])}/${pad(c.coulage[1])} (J-${j})</b></span>
-      ${s.ano ? `<span class="pill p-ko">⚠ ${s.ano} anomalie</span>` : ''}${s.aCtrl ? `<span class="pill p-envoyee">${s.aCtrl} à contrôler</span>` : ''}</div></button>`;
+      ${s.ano ? `<span class="pill p-ko">⚠ ${s.ano} anomalie</span>` : ''}${s.aCtrl ? `<span class="pill p-envoyee">${s.aCtrl} à contrôler</span>` : ''}${memoire(c.id).length ? `<span class="pill p-mem">⟲ ${pluriel(memoire(c.id).length, 'point')} qui revien${memoire(c.id).length > 1 ? 'nent' : 't'}</span>` : ''}</div></button>`;
   }).join('');
   out += '</div><div>';
   const aCtrl = SRV.fiches.filter(aControler).filter(f => P(p).recues === 'tous' || chantier(f.ch).conducteur === P(p).nom).sort((a, b) => b.id - a.id);
@@ -943,6 +1093,7 @@ function legend() {
 function viewTdbChantier(p, c) {
   const s = statsChantier(c);
   let out = `<div class="kpis"><div class="kpi"><b>${s.vert}/${s.total}</b><span>logements validés</span></div><div class="kpi ${s.aCtrl ? 'warn' : ''}"><b>${s.aCtrl}</b><span>à contrôler</span></div></div>`;
+  out += memBox(memoire(c.id), 'Points qui reviennent sur ce chantier (rappelés la veille à l\'équipe)');
   out += legend();
   out += c.bats.map(b => `<div class="bat"><h4>${h(b.nom)}</h4>${b.niv.map((nb, n) => n).reverse().map(n => `<div class="lvl"><span class="lvl__n">${nivL(n)}</span><div class="lvl__c">${Array.from({ length: b.niv[n] }, (_, i) => {
     const cd = code(n, i + 1), e = etatLogement(c.id, b.nom, n, cd);
@@ -964,13 +1115,19 @@ function viewReg(p) {
       const nb = c.bats.reduce((a, b) => a + b.niv.reduce((x, y) => x + y, 0), 0);
       return `<button class="row-btn" data-a="reg-ch" data-v="${c.id}"><div class="row-btn__main"><strong>${h(c.nom)}</strong><span>${h(c.ville)} · ${c.bats.length} bât. · ${nb} logements · conducteur ${h(c.conducteur)}</span></div>${peutModifier(p, c) ? '<span class="pill p-envoyee">modifiable</span>' : ''}<span class="chev">›</span></button>`;
     }).join('')}</div>`;
-    if (admin) out += '<div style="height:10px"></div><button class="btn btn--primary btn--block" data-a="toast" data-v="Maquette : création d\'un chantier prévue au lot E">＋ Nouveau chantier</button>';
+    out += '<div style="height:10px"></div><button class="btn btn--ghost btn--block" data-a="alob-ch">⇩ Importer des chantiers depuis Alobees</button>';
+    if (admin) out += '<div style="height:8px"></div><button class="btn btn--primary btn--block" data-a="toast" data-v="Maquette : création d\'un chantier prévue au lot E">＋ Nouveau chantier</button>';
   } else {
     if (!admin) out += '<div class="info">Lecture seule : seul le patron gère les personnes et les comptes.</div>';
-    out += `<div class="list">${PERSONNES.map(([n, f, id], i) => `<div class="person"><span class="avatar" aria-hidden="true" style="display:grid;place-items:center">${initials(n)}</span>
-      <div><strong>${h(n)}</strong><br>${h(f)} · 06 •• •• •• ${pad(10 + i * 7)}<br><span class="muted">Compte : ${h(id)}</span></div>
-      ${admin ? `<button class="btn btn--sm btn--ghost" data-a="toast" data-v="Maquette : nouveau mot de passe envoyé à ${h(n)}">Mot de passe</button>` : ''}</div>`).join('')}</div>`;
-    if (admin) out += '<div style="height:10px"></div><button class="btn btn--primary btn--block" data-a="toast" data-v="Maquette : ajout d\'une personne prévu au lot E">＋ Ajouter une personne</button>';
+    if (admin) out += '<div class="info">Pas d\'inscription libre : le bureau crée chaque personne et lui remet un <b>code à 6 chiffres</b> (48 h, une seule fois). L\'employé choisit lui-même son mot de passe.</div>';
+    out += `<div class="list">${SRV.personnes.map(([n, f, id], i) => {
+      const st = SRV.comptes[n];
+      const etat = st === 'bio' ? '🔐 Face ID / empreinte' : st === 'actif' ? '✓ Compte activé' : `<b style="color:var(--yel)">⏳ En attente d'activation</b>`;
+      return `<div class="person"><span class="avatar" aria-hidden="true" style="display:grid;place-items:center">${initials(n)}</span>
+      <div><strong>${h(n)}</strong><br>${h(f)} · 06 •• •• •• ${pad(10 + i * 7)}<br><span class="muted">Identifiant : ${h(id)} · ${etat}</span></div>
+      ${admin ? `<button class="btn btn--sm btn--ghost" data-a="code-pers" data-v="${h(n)}">${typeof st === 'object' ? 'Voir le code' : 'Nouveau code'}</button>` : ''}</div>`;
+    }).join('')}</div>`;
+    if (admin) out += '<div style="height:10px"></div><button class="btn btn--primary btn--block" data-a="ajout-pers">＋ Ajouter une personne</button>';
   }
   return out;
 }
@@ -986,6 +1143,7 @@ function viewRegChantier(p, c) {
     const k = b.nom + '|' + n, ind = c.plans[k];
     return `<div class="struct-row"><span>${h(b.nom)} · ${nivL(n)}</span>${ind ? `<button class="btn btn--sm btn--ghost" data-a="plan-reg" data-v="${h(k)}">🗺 Plan indice ${ind}</button>` : (ed ? `<button class="btn btn--sm btn--ghost" data-a="add-plan" data-v="${c.id}|${h(k)}">＋ PDF / photo</button>` : '<span class="muted">pas de plan</span>')}</div>`;
   })).join('')}</div>`;
+  if (ed) out += '<button class="btn btn--ghost btn--block" style="margin-top:8px" data-a="alob-plans" data-v="' + c.id + '">⇩ Récupérer les plans depuis Alobees</button>';
   out += `<h3>Équipe affectée</h3><div class="chips">${c.equipe.map(x => `<span class="chip" style="display:inline-flex;align-items:center">${h(x)}</span>`).join('')}</div>`;
   if (ed) out += `<h3>Importer la structure</h3><p class="lead">Depuis la liste des lots, un descriptif ou un tableau du client. L'appli fait une proposition, vous vérifiez, puis vous enregistrez.</p>
     <div class="ph-btns"><button class="btn btn--ghost" data-a="import" data-v="${c.id}|xlsx">📊 Excel / CSV</button><button class="btn btn--ghost" data-a="import" data-v="${c.id}|pdf">📄 PDF</button></div>`;
@@ -998,7 +1156,7 @@ function viewImport(p, c, s) {
       <p><b>${isPdf ? 'Liste_des_lots_EXEMPLE.pdf' : 'Structure_EXEMPLE.xlsx'}</b></p>
       <p class="muted">${isPdf ? "Lecture du texte du PDF, puis repérage de « Bâtiment / Niveau / Lot ou Logement ». Gratuit, sur l'appareil." : 'Lecture des colonnes Bâtiment / Niveau / Logement.'}</p>
       <button class="btn btn--primary btn--block" data-a="import-read">Lire le fichier (exemple)</button></div>
-      ${isPdf ? '<div class="info" style="margin-top:12px">PDF scanné ou photo de plan : lecture par intelligence artificielle côté serveur (option, quelques centimes par document, à décider plus tard).</div>' : ''}`;
+      ${isPdf ? '<div class="info" style="margin-top:12px">Pas d\'IA : un PDF <b>scanné</b> (une image) ne peut pas être lu automatiquement. Récupérez plutôt le document dans Alobees, ou saisissez la structure à la main avec les boutons + et −.</div>' : ''}`;
   }
   return `<div class="info">Proposition à vérifier : corrigez si besoin, puis enregistrez. Rien n'est enregistré avant.</div>
     <table class="tbl"><thead><tr><th>Bâtiment</th><th>Niveau</th><th>Logements</th><th></th></tr></thead><tbody>
@@ -1008,15 +1166,58 @@ function viewImport(p, c, s) {
     <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="import-save" ${s.prop.some(r => r.doute) ? 'disabled' : ''}>Enregistrer</button></div>`;
 }
 
+/* ---------- Alobees (lecture seule, via le serveur) ---------- */
+function alobDocs(c) {
+  const out = [];
+  c.bats.forEach(b => b.niv.forEach((_, n) => { if (out.length < 5) { const ind = c.plans[b.nom + '|' + n] || 'ABC'[n % 3]; out.push({ nom: `PLAN EXE PLB ${nivL(n)} ${b.nom.toUpperCase()} ind ${ind}.pdf`, k: b.nom + '|' + n, ind }); } }));
+  return out.concat([{ nom: 'CCTP lot plomberie-chauffage.pdf', k: null }, { nom: 'Planning général.pdf', k: null }]);
+}
+function viewAlob(p, s) {
+  let out = '<div class="info">🔒 <b>Lecture seule</b> : l\'appli lit Alobees, elle n\'y modifie et n\'y supprime rien. La clé Alobees reste sur le serveur, jamais dans le téléphone.</div>';
+  if (!s.lu) return out + '<button class="btn btn--primary btn--big" data-a="alob-read">Lire Alobees</button>';
+  if (s.mode === 'ch') {
+    out += `<p class="lead">${SRV.alobees.chantiers.length} chantiers trouvés dans Alobees. Cochez ceux à ajouter au Registre.</p><div class="list">`;
+    out += SRV.alobees.chantiers.map(([nom, ville, deja], i) => deja
+      ? `<div class="pick" style="opacity:.6">✓ ${h(nom)} · ${h(ville)} <span class="muted" style="margin-left:auto">déjà dans le registre</span></div>`
+      : `<button class="pick" data-a="alob-sel" data-v="${i}" aria-pressed="${s.sel.includes(i)}" style="${s.sel.includes(i) ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : ''}">${s.sel.includes(i) ? '☑' : '☐'} ${h(nom)} · ${h(ville)} <span class="pill p-envoyee" style="margin-left:auto">nouveau</span></button>`).join('');
+    return out + `</div><p class="muted">La structure (bâtiments, niveaux, logements) se complète ensuite par import PDF / Excel ou à la main.</p>
+      <div class="foot__row"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer</button></div>`;
+  }
+  const c = chantier(s.id), docs = alobDocs(c);
+  out += `<p class="lead">${docs.length} documents trouvés dans le dossier Alobees du chantier. L'appli repère le niveau dans le <b>nom du fichier</b> (sans IA). Vérifiez, puis enregistrez.</p><div class="list">`;
+  out += docs.map((x, i) => x.k
+    ? `<button class="pick" data-a="alob-sel" data-v="${i}" aria-pressed="${s.sel.includes(i)}" style="${s.sel.includes(i) ? 'border-color:var(--ok);background:var(--ok-bg);color:var(--ok)' : ''}">${s.sel.includes(i) ? '☑' : '☐'} 📄 ${h(x.nom)}<span style="margin-left:auto;white-space:nowrap">→ ${h(x.k.replace('|', ' · ').replace(/ · (\d)$/, (m, n) => ' · ' + nivL(+n)))}</span></button>`
+    : `<div class="pick" style="opacity:.6">📄 ${h(x.nom)} <span class="muted" style="margin-left:auto">ignoré (pas un plan)</span></div>`).join('');
+  return out + `</div><div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="back">Annuler</button><button class="btn btn--ok" data-a="alob-save" ${s.sel.length ? '' : 'disabled'}>Enregistrer ${pluriel(s.sel.length, 'plan')}</button></div>`;
+}
+
 /* ---------- Connexion ---------- */
 function viewLogin(p) {
-  return `<div class="main"><div class="login"><img src="logo.png" alt="Euro Sanichauff">
-    <h3 style="text-align:center;text-transform:none;font-size:18px">Fiches chantier</h3>
-    <label>Identifiant<input class="inp" value="${h(PERSONNES.find(x => x[0] === P(p).nom)?.[2] || '')}" autocomplete="off"></label>
+  const st = p.loginStep || 'login', ident = h(SRV.personnes.find(x => x[0] === P(p).nom)?.[2] || '');
+  let body;
+  if (st === 'login') body = `<label>Identifiant<input class="inp" value="${ident}" autocomplete="off"></label>
     <label>Mot de passe<input class="inp" type="password" value="maquette" autocomplete="off"></label>
-    <label class="check check--small" style="flex-direction:row"><input type="checkbox" checked> Rester connecté sur ce téléphone</label>
+    <label class="check check--small" style="flex-direction:row"><input type="checkbox" checked> Rester connecté sur cet appareil</label>
     <button class="btn btn--primary btn--big" data-a="login">Se connecter</button>
-    <p class="muted" style="text-align:center">Mot de passe oublié ? Demandez au bureau.</p></div></div>`;
+    <button class="btn btn--ghost btn--big" data-a="login-bio">🔐 Face ID / empreinte</button>
+    <button class="link" data-a="act-code" style="align-self:center">Première connexion : j'ai un code à 6 chiffres</button>
+    <p class="muted" style="text-align:center">Mot de passe oublié ? Le bureau vous donne un nouveau code.</p>`;
+  else if (st === 'code') body = `<p class="lead" style="text-align:center">Tapez le code à 6 chiffres remis par le bureau. Il est valable 48 h et ne sert qu'une fois.<br><i>Maquette : n'importe quels 6 chiffres.</i></p>
+    <input class="inp code6" inputmode="numeric" maxlength="6" placeholder="••••••" data-in="code6" aria-label="Code d'activation à 6 chiffres" value="${h(p.code6 || '')}">
+    <button class="btn btn--primary btn--big" data-a="act-check">Valider le code</button>
+    <button class="link" data-a="login-back" style="align-self:center">‹ Retour</button>`;
+  else if (st === 'mdp') body = `<div class="lock">✓ Code accepté · identifiant : ${ident}</div>
+    <label>Choisissez votre mot de passe<input class="inp" type="password" placeholder="8 caractères minimum" autocomplete="new-password"></label>
+    <label>Confirmez-le<input class="inp" type="password" autocomplete="new-password"></label>
+    <p class="muted">Personne d'autre ne le connaît, pas même le bureau.</p>
+    <button class="btn btn--primary btn--big" data-a="act-mdp">Enregistrer</button>`;
+  else body = `<div style="text-align:center;font-size:54px">🔐</div>
+    <h3 style="text-align:center;text-transform:none;font-size:17px">Activer Face ID / empreinte ?</h3>
+    <p class="lead" style="text-align:center">La prochaine fois, l'appli s'ouvre avec votre visage ou votre doigt. Le mot de passe reste en secours.</p>
+    <button class="btn btn--primary btn--big" data-a="act-bio" data-v="oui">Oui, activer</button>
+    <button class="btn btn--ghost btn--block" data-a="act-bio" data-v="non">Plus tard</button>`;
+  return `<div class="main"><div class="login"><img src="logo.png" alt="Euro Sanichauff">
+    <h3 style="text-align:center;text-transform:none;font-size:18px">Fiches chantier</h3>${body}</div></div>`;
 }
 
 /* ---------- Feuilles (bas d'écran) ---------- */
@@ -1034,12 +1235,20 @@ function viewSheet(p) {
     let boxes = '';
     for (let i = 0; i < nb; i++) {
       const cd = code(+n, i + 1), on = sel.includes(cd), cx = 20 + (i % cols) * cw, cy = 34 + Math.floor(i / cols) * rh;
-      boxes += `<rect x="${cx}" y="${cy}" width="${cw - 6}" height="${rh - 8}" rx="4" fill="${on ? '#5CC1D2' : '#fff'}" stroke="#27214E" stroke-width="1.5"/><text x="${cx + (cw - 6) / 2}" y="${cy + rh / 2}" text-anchor="middle" font-size="14" font-weight="700" fill="#27214E">${cd}</text>`;
+      boxes += `<g data-a="plan-log" data-v="${cd}" style="cursor:pointer"><rect x="${cx}" y="${cy}" width="${cw - 6}" height="${rh - 8}" rx="4" fill="${on ? '#5CC1D2' : '#fff'}" stroke="#27214E" stroke-width="1.5"/><text x="${cx + (cw - 6) / 2}" y="${cy + rh / 2}" text-anchor="middle" font-size="14" font-weight="700" fill="#27214E">${cd}</text></g>`;
     }
     const H = 34 + rows * rh + 20;
     return `<div class="sheet__h"><strong>Plan ${h(bat)} · ${nivL(+n)} · indice ${c.plans[s.k]}</strong>${x}</div>
       <div class="plan"><svg viewBox="0 0 ${w} ${H}" role="img" aria-label="Plan schématique du niveau"><rect x="10" y="24" width="${w - 20}" height="${H - 34}" fill="none" stroke="#27214E" stroke-width="3"/><text x="14" y="16" font-size="11" fill="#5F5E75">Maquette : le vrai plan (PDF ou image) s'affichera ici, zoomable</text>${boxes}</svg></div>
-      ${sel.length ? `<p class="muted">En bleu : les logements choisis (${sel.join(', ')}).</p>` : ''}`;
+      <p class="muted">${sel.length ? `En bleu : les logements de la fiche (${sel.join(', ')}). ` : ''}Touchez un logement pour voir <b>son plan</b>.</p>
+      <div class="chips">${Array.from({ length: nb }, (_, i) => code(+n, i + 1)).map(cd => `<button class="btn btn--sm btn--ghost" data-a="plan-log" data-v="${cd}">🏠 ${cd}</button>`).join('')}</div>`;
+  }
+  if (s.t === 'plan-log') {
+    const [bat, n] = s.k.split('|');
+    return `<div class="sheet__h"><strong>Logement ${s.code} · ${h(bat)} ${nivL(+n)}</strong>${x}</div>
+      <div class="plan">${planLogSvg(s.code)}</div>
+      <p class="muted" style="font-size:12px">Maquette : le vrai plan du logement (zoom sur le plan du niveau, ou plan séparé) s'affichera ici. Repères : <b style="color:#1D5FD1">EF</b> eau froide · <b style="color:#B42318">ECS</b> eau chaude · <b style="color:#B76E00">CH</b> chauffage · N nourrice.</p>
+      <button class="btn btn--ghost btn--block" data-a="plan-back">‹ Plan du niveau</button>`;
   }
   if (s.t === 'valider') {
     const f = fiche(s.id), abs = P(p).valide === 'absence';
@@ -1051,12 +1260,45 @@ function viewSheet(p) {
       <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}">✓ Valider</button></div>`;
   }
   if (s.t === 'corriger') {
-    const motifs = ['Photo manquante', 'Anomalie à corriger', 'Mauvais logement ou niveau', 'Point mal renseigné'];
-    return `<div class="sheet__h"><strong>Renvoyer à corriger</strong>${x}</div>
-      <p class="muted">Le compagnon reçoit une notification avec le motif.</p>
+    const f = fiche(s.id), motifs = ['Photo manquante', 'Mauvais logement ou niveau'];
+    return `<div class="sheet__h"><strong>Renvoyer ${f.num} à corriger</strong>${x}</div>
+      <p class="muted">Touchez les points à reprendre : ils reviennent <b style="color:var(--ko)">en rouge</b> chez ${h(f.auteur)}, qui est emmené directement dessus.</p>
+      ${SECS.map(sec => `<h5>${sec.n}. ${sec.titre}</h5>${sec.items.map(([id, l]) => `<button class="pick" data-a="flag" data-v="${id}" aria-pressed="${s.pts.includes(id)}">${s.pts.includes(id) ? '↩' : '○'} ${h(l)}${f.rep[id] === 'ko' ? ' <span class="pill p-ko" style="margin-left:auto">anomalie signalée</span>' : ''}</button>`).join('')}`).join('')}
+      <h5>Autre motif <small class="muted">facultatif</small></h5>
       <div class="chips" style="margin-bottom:10px">${motifs.map(m => `<button class="chip" data-a="motif" data-v="${h(m)}" aria-pressed="${s.motif === m}">${h(m)}</button>`).join('')}</div>
-      <textarea rows="2" data-in="motif-txt" placeholder="Précision (facultatif)">${h(s.txt || '')}</textarea>
-      <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ko" data-a="corriger-ok" data-v="${s.id}" ${s.motif ? '' : 'disabled'}>↩ Renvoyer</button></div>`;
+      <textarea rows="2" data-in="motif-txt" placeholder="Précision pour l'équipe (facultatif)">${h(s.txt || '')}</textarea>
+      <div class="foot__row" style="margin-top:12px"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ko" data-a="corriger-ok" data-v="${s.id}" ${s.pts.length || s.motif ? '' : 'disabled'}>↩ Renvoyer (${pluriel(s.pts.length, 'point')})</button></div>`;
+  }
+  if (s.t === 'rappel-mat') {
+    const pl = SRV.planning.find(y => y.id === s.id), c = chantier(pl.ch), mem = memoire(pl.ch);
+    return `<div class="sheet__h"><strong>${pl.date === dateDemain() ? 'Demain' : 'Le ' + pl.date.slice(0, 5)} : incorporation</strong>${x}</div>
+      <p class="muted">${h(c.nom)} · ${h(pl.bat)} · ${nivL(pl.niv)} · ${pl.logs.join(' ')} · coulage ${pl.coulage.slice(0, 5)}</p>
+      ${mem.length ? memBox(mem, 'Points déjà oubliés sur ce chantier') : '<div class="lock">👍 Aucun point oublié en mémoire sur ce chantier</div>'}
+      <h5>🧰 Matériel à préparer ce soir</h5><ul class="matlist">${SECS[1].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>
+      <h5>📄 Documents à avoir</h5><ul class="matlist">${SECS[0].items.map(([, l]) => `<li>☐ ${h(l)}</li>`).join('')}</ul>`;
+  }
+  if (s.t === 'rappel-coul') {
+    const c = chantier(s.ch), fs = SRV.fiches.filter(f => f.ch === c.id && f.coulage === s.date && f.statut !== 'attente'), nv = fs.filter(f => f.statut !== 'validee');
+    return `<div class="sheet__h"><strong>Coulage demain : ${h(c.nom)}</strong>${x}</div>
+      ${nv.length ? `<div class="alert">⚠ ${pluriel(nv.length, 'fiche')} pas encore validée(s) : pas de coulage sans la validation du conducteur.</div>` : '<div class="lock">✓ Toutes les fiches de ce coulage sont validées</div>'}
+      <div class="list">${fs.map(f => rowFiche(p, f, true)).join('')}</div>
+      ${memBox(memoire(c.id), 'Points qui reviennent sur ce chantier')}
+      <h5>Avant de couler</h5><ul class="matlist">${RAPPELS.slice(2, 5).map(r => `<li>• ${h(r)}</li>`).join('')}</ul>`;
+  }
+  if (s.t === 'code') {
+    return `<div class="sheet__h"><strong>Code d'activation : ${h(s.nom)}</strong>${x}</div>
+      ${s.nouveau ? '<div class="lock">✓ Personne créée</div>' : '<p class="muted">L\'ancien mot de passe ne marchera plus une fois ce code utilisé.</p>'}
+      <div class="code6">${s.code.slice(0, 3)} ${s.code.slice(3)}</div>${qrSvg(s.code)}
+      <p style="text-align:center;font-weight:700;color:var(--navy);margin:4px 0">Valable 48 h · une seule fois</p>
+      <ol style="font-size:13.5px;padding-left:20px"><li>Ouvrir l'appli Fiches chantier (ou scanner le QR code)</li><li>« Première connexion : j'ai un code à 6 chiffres »</li><li>Taper le code</li><li>Choisir son mot de passe, puis Face ID / empreinte</li></ol>
+      <p class="muted">À donner en main propre ou par message. Pas besoin d'adresse mail.</p>`;
+  }
+  if (s.t === 'ajout') {
+    const roles = ['Compagnon', "Chef d'équipe", 'Chef de chantier', 'Conducteur de travaux', 'Facturation'];
+    return `<div class="sheet__h"><strong>Ajouter une personne</strong>${x}</div>
+      <div class="field"><div class="field__l">Nom</div><input class="inp" data-in="ajout-nom" value="${h(s.nom)}" placeholder="Prénom N." autocomplete="off"></div>
+      <div class="field"><div class="field__l">Profil</div><div class="chips">${roles.map(r => `<button class="chip" data-a="ajout-role" data-v="${h(r)}" aria-pressed="${s.role === r}">${h(r)}</button>`).join('')}</div></div>
+      <button class="btn btn--primary btn--big" data-a="ajout-ok">Créer et générer le code</button>`;
   }
   if (s.t === 'cell') {
     const c = chantier(s.ch), fs = SRV.fiches.filter(f => f.ch === s.ch && f.bat === s.bat && f.niv === s.n && f.logs.includes(s.code)).sort((a, b) => b.id - a.id);
@@ -1069,6 +1311,7 @@ function viewSheet(p) {
     const pr = P(p);
     return `<div class="sheet__h"><strong>${h(pr.nom)}</strong>${x}</div><p class="muted">${h(pr.role)}</p>
       <p style="font-size:13px">Onglets visibles avec ce profil : <b>${pr.tabs.map(t => ({ inc: 'Incorporation', tdb: 'Tableau de bord', reg: 'Registre' })[t]).join(', ')}</b></p>
+      <p style="font-size:13px">Connexion : <b>${SRV.comptes[pr.nom] === 'bio' ? '🔐 Face ID / empreinte activé' : 'mot de passe'}</b> · reste connecté sur cet appareil</p>
       <button class="btn btn--ghost btn--block" data-a="logout">Se déconnecter</button>`;
   }
   return '';
@@ -1088,14 +1331,73 @@ function act(p, a, v, ev) {
     case 'back': back(p); break;
     case 'home': p.scr = { n: 'home' }; p.hist = []; p.seg = 'mes'; break;
     case 'me': p.sheet = { t: 'me' }; break;
-    case 'logout': p.loggedOut = true; p.sheet = null; break;
+    case 'logout': p.loggedOut = true; p.loginStep = 'login'; p.sheet = null; break;
     case 'login': p.loggedOut = false; break;
+    case 'login-bio': p.loggedOut = false; toast(p, SRV.comptes[P(p).nom] === 'bio' ? '🔐 Reconnu, bienvenue' : 'Face ID pas encore activé sur ce compte : connectez-vous une fois avec le mot de passe'); if (SRV.comptes[P(p).nom] !== 'bio') p.loggedOut = true; break;
+    case 'act-code': p.loginStep = 'code'; p.code6 = ''; break;
+    case 'login-back': p.loginStep = 'login'; break;
+    case 'act-check': if (/^\d{6}$/.test(p.code6 || '')) p.loginStep = 'mdp'; else toast(p, 'Le code doit avoir 6 chiffres'); break;
+    case 'act-mdp': p.loginStep = 'bio'; break;
+    case 'act-bio': SRV.comptes[P(p).nom] = v === 'oui' ? 'bio' : 'actif'; p.loggedOut = false; p.loginStep = 'login'; log(P(p).nom, 'Serveur', `👤 Compte activé${v === 'oui' ? ' + Face ID / empreinte' : ''}`); toast(p, v === 'oui' ? '🔐 Face ID / empreinte activé' : 'Compte activé'); break;
+    case 'rappel-open': { const r = SRV.rappels.find(y => y.id === +v); p.sheet = r.sheet; break; }
+    case 'rappel-mat': p.sheet = { t: 'rappel-mat', id: +v }; break;
+    case 'prog-new': go(p, { n: 'prog', f: { ch: null, bat: null, niv: null, logs: [], date: null, coulage: null, chefEq: null, comps: [] } }); break;
+    case 'pg-ch': { const f = p.scr.f, c = chantier(v); Object.assign(f, { ch: v, bat: c.bats.length === 1 ? c.bats[0].nom : null, niv: null, logs: [] }); break; }
+    case 'pg-bat': Object.assign(p.scr.f, { bat: v, niv: null, logs: [] }); break;
+    case 'pg-niv': Object.assign(p.scr.f, { niv: +v, logs: [] }); break;
+    case 'pg-log': { const f = p.scr.f; f.logs = f.logs.includes(v) ? f.logs.filter(y => y !== v) : [...f.logs, v].sort(); break; }
+    case 'pg-date': p.scr.f.date = v; break;
+    case 'pg-coul': p.scr.f.coulage = v; break;
+    case 'pg-chefeq': p.scr.f.chefEq = p.scr.f.chefEq === v ? null : v; break;
+    case 'pg-comp': { const f = p.scr.f; f.comps = f.comps.includes(v) ? f.comps.filter(y => y !== v) : [...f.comps, v]; break; }
+    case 'pg-save': {
+      const f = p.scr.f, c = chantier(f.ch), pl = Object.assign({ id: ++PSEQ }, JSON.parse(JSON.stringify(f)), { chef: p.profil === 'chef' ? P(p).nom : c.chef });
+      SRV.planning.push(pl);
+      log(P(p).nom, 'Serveur', `📅 Incorporation programmée le ${pl.date.slice(0, 5)} : ${c.nom}, ${pl.bat} ${nivL(pl.niv)}`);
+      notify(profilsDe([pl.chef, pl.chefEq, ...pl.comps]).filter(k => k !== p.profil), `Incorporation programmée le ${pl.date.slice(0, 5)}`, `${c.nom} · ${pl.bat} ${nivL(pl.niv)} · vous êtes dans l'équipe`, null, { t: 'rappel-mat', id: pl.id });
+      back(p); toast(p, 'Programmée : rappel à l\'équipe la veille à 18 h'); break;
+    }
+    case 'prog-start': {
+      const pl = SRV.planning.find(y => y.id === +v);
+      DRAFTS[p.profil] = Object.assign(newDraft(p), { ch: pl.ch, bat: pl.bat, niv: pl.niv, logs: pl.logs.slice(), coulage: pl.coulage, chef: pl.chef, chefEq: pl.chefEq, comps: pl.comps.slice(), step: 4, visited: 4 });
+      p.scr = { n: 'wizard' }; p.hist = []; toast(p, 'Chantier, emplacement et équipe déjà remplis'); break;
+    }
+    case 'code-pers': {
+      const st = SRV.comptes[v], c6 = typeof st === 'object' ? st.code : code6();
+      SRV.comptes[v] = { code: c6 }; p.sheet = { t: 'code', nom: v, code: c6 }; break;
+    }
+    case 'ajout-pers': p.sheet = { t: 'ajout', nom: '', role: 'Compagnon' }; break;
+    case 'ajout-role': p.sheet.role = v; break;
+    case 'ajout-ok': {
+      const nom = (p.sheet.nom || '').trim();
+      if (!nom) { toast(p, 'Indiquez le nom'); break; }
+      const ident = nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z ]/g, '').trim().split(/\s+/).map((w, i) => i ? w[0] : w).join('.');
+      SRV.personnes.push([nom, p.sheet.role, ident]);
+      const c6 = code6(); SRV.comptes[nom] = { code: c6 };
+      log(P(p).nom, 'Serveur', `👤 Compte créé : ${nom} (${p.sheet.role}), code d'activation généré`);
+      p.sheet = { t: 'code', nom, code: c6, nouveau: true }; break;
+    }
+    case 'alob-ch': go(p, { n: 'reg-alob', mode: 'ch', lu: false, sel: [] }); break;
+    case 'alob-plans': go(p, { n: 'reg-alob', mode: 'plans', id: v, lu: false, sel: [] }); break;
+    case 'alob-read': {
+      const s2 = p.scr; s2.lu = true;
+      if (s2.mode === 'plans') s2.sel = alobDocs(chantier(s2.id)).map((y, i) => (y.k ? i : -1)).filter(i => i >= 0);
+      log(P(p).nom, 'Alobees', `🔒 Lecture seule : ${s2.mode === 'ch' ? 'liste des chantiers' : 'documents du chantier ' + chantier(s2.id).nom} (via le serveur)`, 't-mail'); break;
+    }
+    case 'alob-sel': { const s2 = p.scr, i = +v; s2.sel = s2.sel.includes(i) ? s2.sel.filter(y => y !== i) : [...s2.sel, i]; break; }
+    case 'alob-save': {
+      const s2 = p.scr;
+      if (s2.mode === 'ch') s2.sel.forEach(i => { const [nom, ville] = SRV.alobees.chantiers[i]; SRV.alobees.chantiers[i][2] = true; SRV.chantiers.push({ id: 'alob' + i, nom, ville, adresse: 'importée depuis Alobees', client: '—', dates: '—', conducteur: 'Sophie D.', chef: 'Julien M.', coulage: [30, 10], bats: [{ nom: 'Bât A', niv: [2, 2] }], plans: {}, equipe: [] }); });
+      else { const c = chantier(s2.id), docs = alobDocs(c); s2.sel.forEach(i => { c.plans[docs[i].k] = docs[i].ind; }); }
+      const nb = s2.sel.length; back(p); toast(p, s2.mode === 'ch' ? `${pluriel(nb, 'chantier')} ajouté(s) : structure provisoire à compléter` : `${pluriel(nb, 'plan')} récupéré(s) depuis Alobees`); break;
+    }
     case 'sheet-x': p.sheet = null; break;
     case 'toast': toast(p, v); break;
     case 'xlsx': toast(p, 'Maquette : le vrai fichier Excel sera généré au lot B'); break;
     case 'export': toast(p, 'Maquette : export Excel du tableau de bord au lot D'); break;
     case 'notif': {
-      const id = p.notif.ficheId; p.notif = null;
+      const id = p.notif.ficheId, sh = p.notif.sheet; p.notif = null;
+      if (sh) { p.sheet = sh; break; }
       if (p.scr.n === 'wizard') { toast(p, 'Fiche ouverte après votre saisie'); break; }
       const f = fiche(id); ouvrirFiche(p, f); setTab(p, 'inc'); go(p, { n: 'fiche', id }); break;
     }
@@ -1124,11 +1426,14 @@ function act(p, a, v, ev) {
       }, 600);
       break;
     }
-    case 'corriger': p.sheet = { t: 'corriger', id: +v, motif: null, txt: '' }; break;
-    case 'motif': p.sheet.motif = v; break;
+    case 'corriger': { const f = fiche(+v); p.sheet = { t: 'corriger', id: f.id, pts: ALL_ITEMS.filter(([id]) => f.rep[id] === 'ko').map(([id]) => id), motif: null, txt: '' }; break; }
+    case 'flag': { const s2 = p.sheet; s2.pts = s2.pts.includes(v) ? s2.pts.filter(y => y !== v) : [...s2.pts, v]; break; }
+    case 'motif': p.sheet.motif = p.sheet.motif === v ? null : v; break;
     case 'corriger-ok': {
       const f = fiche(+v), pr = P(p), s = p.sheet;
-      f.statut = 'corriger'; f.motif = s.motif + (s.txt ? ' : ' + s.txt : '');
+      f.statut = 'corriger'; f.flag = s.pts.slice(); f.flagNote = s.txt || null; f.demandeur = pr.nom;
+      f.fautes = [...new Set([...(f.fautes || []), ...s.pts])];
+      f.motif = [s.pts.length ? pluriel(s.pts.length, 'point') + ' à corriger' : '', s.motif, s.txt].filter(Boolean).join(' · ');
       f.histo.push([`À corriger (${pr.nom})`, fmtD(AUJ) + ' ' + now()]);
       p.sheet = null;
       log(pr.nom, [...new Set([f.auteur, ...equipe(f)])].join(', '), `↩ ${f.num} renvoyée à corriger : ${f.motif}`, 't-ko');
@@ -1136,11 +1441,15 @@ function act(p, a, v, ev) {
       break;
     }
     case 'reprendre': {
-      const f = fiche(+v);
-      DRAFTS[p.profil] = Object.assign(newDraft(p), JSON.parse(JSON.stringify({ ch: f.ch, bat: f.bat, niv: f.niv, logs: f.logs, coulage: f.coulage, chef: f.chef, chefEq: f.chefEq, comps: f.comps, rep: f.rep, notes: f.notes, obs: f.obs })), { photos: f.photos.slice(), step: 7, visited: 8, fixOf: f.id });
+      /* système rouge : les points demandés sont vidés (à re-répondre), on ouvre directement la première étape concernée */
+      const f = fiche(+v), flag = (f.flag || []).slice();
+      const base = JSON.parse(JSON.stringify({ ch: f.ch, bat: f.bat, niv: f.niv, logs: f.logs, coulage: f.coulage, chef: f.chef, chefEq: f.chefEq, comps: f.comps, rep: f.rep, notes: f.notes, obs: f.obs }));
+      flag.forEach(id => delete base.rep[id]);
+      DRAFTS[p.profil] = Object.assign(newDraft(p), base, { flag, photos: f.photos.slice(), excel: f.excel, step: flag.length ? secOf(flag[0]).n : 7, visited: 8, fixOf: f.id });
       p.hist = []; p.scr = { n: 'wizard' };
       break;
     }
+    case 'goto-fix': { const id = d.flag.find(i => !d.rep[i]); d.step = id ? secOf(id).n : 8; break; }
     case 'mail-factu': { const f = fiche(+v); log(P(p).nom, 'Serveur', `Demande d'envoi de l'Excel ${f.num}`); setTimeout(() => { log('Serveur', 'Facturation', `✉ ${f.num}.xlsx envoyé en pièce jointe à ${MAIL_FACTU}`, 't-mail'); renderAll(); }, 500); toast(p, "L'Excel part à la facturation"); break; }
     /* assistant */
     case 'step': d.step = +v; break;
@@ -1162,15 +1471,16 @@ function act(p, a, v, ev) {
     case 'ph-del': d.photos.splice(+v, 1); break;
     case 'lu': d.lu = ev.target.checked; break;
     case 'excel': d.excel = ev.target.checked; break;
+    case 'ph-alob': d.alobees = ev.target.checked; break;
     case 'send': {
       const pr = P(p);
       let f;
       if (d.fixOf) {
         f = fiche(d.fixOf);
-        Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, motif: null, coulage: d.coulage, logs: d.logs, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60) });
+        Object.assign(f, { rep: d.rep, notes: d.notes, photos: d.photos, obs: d.obs, excel: d.excel, alobees: d.alobees, flag: [], flagNote: null, motif: null, coulage: d.coulage, logs: d.logs, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60) });
       } else {
         f = { id: ++SEQ, num: 'F-0' + SEQ, ch: d.ch, bat: d.bat, niv: d.niv, logs: d.logs, statut: 'attente', auteur: pr.nom,
-          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
+          date: d.date, coulage: d.coulage, chef: d.chef, chefEq: d.chefEq, comps: d.comps, rep: d.rep, notes: d.notes, photos: d.photos, nbPhotosDemo: 0, obs: d.obs, excel: d.excel, alobees: d.alobees, sign: d.sign, signeLe: fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60), vu: {}, histo: [], valideur: null, motif: null };
         SRV.fiches.push(f);
       }
       const fix = !!d.fixOf;
@@ -1190,6 +1500,9 @@ function act(p, a, v, ev) {
     case 'add-bat': { const c = chantier(v); c.bats.push({ nom: 'Bât ' + String.fromCharCode(65 + c.bats.length), niv: [3, 3] }); break; }
     case 'add-plan': { const [cid, ...k] = v.split('|'); chantier(cid).plans[k.join('|')] = 'A'; toast(p, 'Maquette : plan ajouté (indice A)'); break; }
     case 'plan-fiche': { const f = fiche(+v); p.sheet = { t: 'plan', ch: f.ch, k: f.bat + '|' + f.niv, sel: f.logs }; break; }
+    case 'plan-fiche-log': { const [id, cd] = v.split('|'), f = fiche(+id); p.sheet = { t: 'plan-log', ch: f.ch, k: f.bat + '|' + f.niv, sel: f.logs, code: cd }; break; }
+    case 'plan-log': p.sheet = Object.assign({}, p.sheet, { t: 'plan-log', code: v }); break;
+    case 'plan-back': p.sheet = Object.assign({}, p.sheet, { t: 'plan' }); break;
     case 'plan-reg': p.sheet = { t: 'plan', ch: p.scr.id, k: v }; break;
     case 'import': { const [cid, type] = v.split('|'); go(p, { n: 'reg-import', id: cid, type }); break; }
     case 'import-read': {
@@ -1212,9 +1525,11 @@ function act(p, a, v, ev) {
 }
 function onInput(p, el) {
   const d = DRAFTS[p.profil];
-  if (el.dataset.in === 'note') d.notes[el.dataset.v] = el.value;
-  else if (el.dataset.in === 'obs') d.obs = el.value;
+  if (el.dataset.in === 'note' && d) d.notes[el.dataset.v] = el.value;
+  else if (el.dataset.in === 'obs' && d) d.obs = el.value;
   else if (el.dataset.in === 'motif-txt' && p.sheet) p.sheet.txt = el.value;
+  else if (el.dataset.in === 'code6') p.code6 = el.value.replace(/\D/g, '').slice(0, 6);
+  else if (el.dataset.in === 'ajout-nom' && p.sheet) p.sheet.nom = el.value;
 }
 async function onPhotos(p, input) {
   const d = DRAFTS[p.profil];
@@ -1240,10 +1555,11 @@ function renderJournal(de, vers) {
   j.innerHTML = SRV.log.length
     ? SRV.log.map(e => `<li class="${e.type}"><time>${e.t}</time><b>${h(e.de)}</b> → <b>${h(e.vers)}</b><br>${h(e.txt)}</li>`).join('')
     : '<li class="journal__empty" style="border:0;background:none">Aucun échange pour l\'instant. Remplissez et envoyez une fiche…</li>';
-  ['fn-c', 'fn-s', 'fn-p', 'fn-f', 'fa-cs', 'fa-sp'].forEach(id => document.getElementById(id).classList.remove('on'));
+  ['fn-c', 'fn-s', 'fn-p', 'fn-f', 'fn-a', 'fa-cs', 'fa-sp'].forEach(id => document.getElementById(id).classList.remove('on'));
   if (!de) return;
   const on = (...ids) => ids.forEach(id => document.getElementById(id).classList.add('on'));
-  if (vers === 'Serveur') on('fn-c', 'fa-cs', 'fn-s');
+  if (vers === 'Alobees' || de === 'Alobees') on('fn-s', 'fn-a');
+  else if (vers === 'Serveur') on('fn-c', 'fa-cs', 'fn-s');
   else if (vers === 'Facturation') on('fn-s', 'fn-f');
   else if (de === 'Serveur' && /Conducteur/.test(vers)) on('fn-s', 'fa-sp', 'fn-p');
   else if (de === 'Serveur') on('fn-s', 'fa-cs', 'fn-c');
@@ -1300,6 +1616,26 @@ const segCtl = (id, attr, fn) => document.getElementById(id).addEventListener('c
 segCtl('ctl-mode', 'mode', v => { MODE = +v; buildStage(); });
 segCtl('ctl-format', 'format', v => { FORMAT = v; if (v === 'pc' && PHONES[0].profil === 'compagnon') { Object.assign(PHONES[0], newPhone('patron'), { id: 0 }); } buildStage(); });
 document.getElementById('ctl-reset').addEventListener('click', reset);
+/* « La veille à 18 h » : rappels d'incorporation (matériel + points oubliés) et de coulage */
+function simulerVeille() {
+  const dem = dateDemain(); let nb = 0;
+  const pousser = (profils, title, body, sheet) => { const r = { id: ++RSEQ, profils, title, body, sheet }; SRV.rappels.push(r); notify(profils, title, body, null, sheet); nb++; };
+  SRV.planning.filter(x => x.date === dem).forEach(x => {
+    const c = chantier(x.ch), mem = memoire(x.ch), noms = [x.chef, x.chefEq, ...x.comps].filter(Boolean);
+    log('Serveur', 'Équipe', `🔔 18:00 veille d'incorporation → ${noms.join(', ')} : matériel à préparer${mem.length ? ' + ' + pluriel(mem.length, 'point') + ' souvent oublié(s)' : ''}`, 't-notif');
+    pousser(profilsDe(noms), `Demain : incorporation ${c.nom}`, `${x.bat} ${nivL(x.niv)} · préparez le matériel${mem.length ? ' · ⚠ ' + pluriel(mem.length, 'point') + ' souvent oublié(s)' : ''}`, { t: 'rappel-mat', id: x.id });
+  });
+  SRV.chantiers.forEach(c => {
+    const fs = SRV.fiches.filter(f => f.ch === c.id && f.coulage === dem && f.statut !== 'attente');
+    if (!fs.length) return;
+    const nv = fs.filter(f => f.statut !== 'validee'), noms = [...new Set(fs.flatMap(f => [f.auteur, f.chef, ...equipe(f)]).concat([c.conducteur, 'Direction']))];
+    log('Serveur', 'Équipe', `🔔 18:00 veille de coulage ${c.nom} → ${noms.join(', ')}${nv.length ? ' : ⚠ ' + pluriel(nv.length, 'fiche') + ' pas encore validée(s)' : ''}`, 't-notif');
+    pousser(profilsDe(noms), `Coulage demain : ${c.nom}`, nv.length ? `⚠ ${pluriel(nv.length, 'fiche')} pas encore validée(s)` : 'Toutes les fiches sont validées ✓', { t: 'rappel-coul', ch: c.id, date: dem });
+  });
+  if (!nb) log('Serveur', '—', 'Aucun rappel pour demain');
+  renderAll();
+}
+document.getElementById('ctl-veille').addEventListener('click', simulerVeille);
 reset();
 </script>
 </body>
