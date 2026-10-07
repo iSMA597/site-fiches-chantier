@@ -406,12 +406,13 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Alobees, testé avec la vraie clé</b> : 74 chantiers, arborescence complète des documents, PDF téléchargeables. Dans l'appli : dossiers Devis / Clients <b>masqués</b>, bâtiment / niveau / indice <b>lus dans le nom du fichier</b>, alerte quand un <b>nouvel indice</b> arrive. <i>Essai : patron › Registre › Tilleuls.</i></li>
         <li>✓ <b>Tâches « Incorporation » d'Alobees</b> reprises dans les incorporations programmées (à confirmer par le test C). <i>Essai : chef › « Tâches Alobees ».</i></li>
         <li>✓ <b>Fiche sans programmation</b> toujours possible. À la réception, <b>comparaison</b> avec ce qui était prévu (date, logements restants, indice du plan). <i>Essai : conducteur › F-0143.</i></li>
+        <li>✓ <b>Le conducteur signe au doigt</b> pour valider. Les deux signatures (auteur + conducteur) sont sur la fiche. <i>Essai : conducteur › une fiche reçue › Valider.</i></li>
         <li>✓ <b>Preuve dans Alobees</b> : à la validation, l'Excel de la fiche peut être déposé dans le dossier « Fiches incorporation » du chantier. C'est la seule écriture autorisée vers Alobees.</li>
       </ol>
       <h2 style="margin-top:14px">Reste à trancher</h2>
       <ol class="todo">
         <li><b>Profil Facturation</b> : le supprimer ? L'Excel des fiches validées arrive déjà par mail.</li>
-        <li><b>Le conducteur doit-il aussi signer</b> quand il valide ? (aujourd'hui : son nom + date + heure, sans dessin)</li>
+
         <li><b>Écriture dans Alobees</b> (dépôt de l'Excel, photos) : à confirmer avec Alobees, rien n'a été testé en écriture.</li>
         <li><b>Test C</b> : tâches et planning Alobees (dates, équipe).</li>
       </ol>
@@ -494,9 +495,9 @@ function seed() {
       chantiers: [['Résidence Les Tilleuls', 'Lille', true], ['Les Jardins du Parc', 'Armentières', true], ['Le Clos Saint-Jean', 'Lomme', true], ['Résidence Le Moulin', 'Wambrechies', false]],
       /* tâches du planning Alobees : seules celles qui commencent par « Incorporation » sont reprises */
       taches: [
-        { id: 't1', nom: 'Incorporation R+3 Bat A', ch: 'til', debut: '09/10/2026', equipe: ['Karim B.', 'Mehdi R.'] },
+        { id: 't1', nom: '1 Incorporation R+3 Bat A', ch: 'til', debut: '09/10/2026', equipe: ['Karim B.', 'Mehdi R.'] },
         { id: 't2', nom: 'Incorporation R+1 Bat A', ch: 'clo', debut: '12/10/2026', equipe: ['Lucas P.'] },
-        { id: 't3', nom: 'Passage fourreaux ECS et chauffage', ch: 'til', debut: '08/10/2026', equipe: ['Mehdi R.'] },
+        { id: 't3', nom: '0 Passage fourreaux ECS et chauffage', ch: 'til', debut: '08/10/2026', equipe: ['Mehdi R.'] },
       ],
     },
   };
@@ -514,7 +515,10 @@ function seed() {
   mk(142, 'til', 'Bât B', 1, ['011', '012', '013'], 'recue', 'Julien M.', ['c9'], { vu: { conducteur: 1, patron: 1, chef: 1 }, notes: { c9: '2 bouchons manquants au 012, commandés' }, histo: [['Envoyée', '04/10 17:02'], ['Reçue par Sophie D.', '05/10 07:40']] });
   mk(143, 'til', 'Bât B', 2, ['021'], 'envoyee', 'Antoine C.', ['c9'], { date: '05/10/2026', notes: { c9: 'Bouchon manquant sur une attente du 021' }, histo: [['Envoyée', '05/10 09:58']] });
   mk(144, 'jar', 'Bât 1', 1, ['011', '012'], 'corriger', 'Julien M.', ['c3'], { coulage: '15/10/2026', vu: { conducteur: 1, patron: 1 }, notes: { c3: 'Nourrice décalée de 20 cm au 012' }, flag: ['c3', 'c6'], fautes: ['c3', 'c6'], demandeur: 'Sophie D.', flagNote: 'Reprendre la nourrice du 012 et recoter les sorties', motif: '2 points à corriger · Photo manquante', histo: [['Envoyée', '04/10 16:15'], ['Reçue par Sophie D.', '04/10 18:02'], ['À corriger (Sophie D.)', '04/10 18:05']] });
-  SRV.fiches.forEach(f => { if (!f.signeLe) f.signeLe = f.histo[0][1]; });
+  SRV.fiches.forEach(f => {
+    if (!f.signeLe) f.signeLe = f.histo[0][1];
+    if (f.statut === 'validee' && !f.signValideur) { f.signValideur = SIGN_DEMO; f.valideLe = (f.histo[1] || f.histo[0])[1]; }
+  });
   DRAFTS = {};
 }
 
@@ -586,7 +590,8 @@ function lireNomPlan(nom) {
     ind: indice ? indice[1] : null,
   };
 }
-const estUneIncorporation = nomTache => /^incorporation/i.test(nomTache.trim());
+/* « Incorporation » n'importe où dans le nom : les vrais noms commencent parfois par un numéro (« 1 Incorporation 60 Logements ») */
+const estUneIncorporation = nomTache => /incorporation/i.test(nomTache);
 
 /* ---- Alobees simulé : ce que la passerelle (lecture seule) verrait pour un chantier ---- */
 const DOSSIERS_MASQUES = /DEVIS|CLIENT|ADMINISTRATIF|FACTUR/i;   // jamais affichés dans l'appli
@@ -835,8 +840,10 @@ function renderPhone(p, el) {
 }
 /* Signature au doigt : le dessin est gardé en image dans le brouillon (survit aux re-rendus) */
 function setupSign(p, el) {
-  const cv = el.querySelector('canvas[data-sign]'), d = DRAFTS[p.profil];
-  if (!cv || !d) return;
+  const cv = el.querySelector('canvas[data-sign]');
+  if (!cv) return;
+  const d = cv.dataset.sign === 'validation' ? p.sheet : DRAFTS[p.profil];   // à qui appartient la signature
+  if (!d) return;
   const r = cv.getBoundingClientRect(), k = window.devicePixelRatio || 1;
   cv.width = r.width * k; cv.height = r.height * k;
   const g = cv.getContext('2d');
@@ -995,7 +1002,8 @@ function viewFiche(p, f) {
   const nph = f.photos.length || f.nbPhotosDemo;
   out += `<h3>Photos (${nph})</h3>` + (nph ? `<div class="ph-grid">${f.photos.length ? f.photos.map(ph => `<div class="ph"><img src="${ph.src}" alt="Photo jointe"></div>`).join('') : Array.from({ length: nph }, (_, i) => `<div class="ph">photo ${i + 1}<br>(exemple)</div>`).join('')}</div>` : '<p class="muted">Aucune photo jointe.</p>');
   if (f.obs) out += `<h3>Observations</h3><div class="card">${h(f.obs)}</div>`;
-  if (f.sign) out += `<h3>Signature</h3><div class="card"><img class="sign-img" src="${f.sign}" alt="Signature de ${h(f.auteur)}"><span class="muted">${h(f.auteur)} · le ${h(f.signeLe)}</span></div>`;
+  if (f.sign) out += `<h3>Signatures</h3><div class="card"><img class="sign-img" src="${f.sign}" alt="Signature de ${h(f.auteur)}"><span class="muted">Rempli par ${h(f.auteur)} · le ${h(f.signeLe)}</span>
+    ${f.signValideur ? `<img class="sign-img" style="margin-top:10px" src="${f.signValideur}" alt="Signature de ${h(f.valideur)}"><span class="muted">Validé par ${h(f.valideur)} · le ${h(f.valideLe)}</span>` : ''}</div>`;
   out += `<h3>Historique</h3><div class="card" style="font-size:13px">${f.histo.map(([l, t]) => `<div>• ${h(t)} : ${h(l)}</div>`).join('')}</div>`;
 
   // actions selon le profil
@@ -1374,7 +1382,11 @@ function viewSheet(p) {
       ${nbKo(f) ? `<div class="alert">⚠ ${nbKo(f)} anomalie signalée sur cette fiche. Vérifiez qu'elle est réglée avant d'autoriser le coulage.</div>` : ''}
       <label class="check check--small"><input type="checkbox" data-a="sheet-alob" ${s.alobees ? 'checked' : ''}><span>📁 Déposer l'Excel dans Alobees<small>${h(chantier(f.ch).nom)} › Fiches incorporation · preuve en plus · seule écriture autorisée vers Alobees (à confirmer avec Alobees)</small></span></label>
       <label class="check check--small" style="margin-bottom:10px"><input type="checkbox" data-a="sheet-excel" ${s.excel ? 'checked' : ''}><span>Envoyer l'Excel à la facturation<small>${f.excel ? 'Demandé par ' + h(f.auteur) + ' à l\'envoi' : 'Non demandé à l\'envoi'} · pièce jointe à ${MAIL_FACTU}</small></span></label>
-      <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}">✓ Valider</button></div>`;
+      <div class="field"><div class="field__l">Signature du conducteur <small>avec le doigt</small></div>
+        <div class="sign"><canvas data-sign="validation" aria-label="Zone de signature du conducteur"></canvas>${s.sign ? '' : '<span class="sign__ph">Signez ici</span>'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span class="muted" style="font-size:12px">${h(P(p).nom)} · ${fmtD(AUJ)} à la validation</span>${s.sign ? '<button class="link" data-a="sign-clear-validation">Effacer</button>' : ''}</div></div>
+      <div class="foot__row"><button class="btn btn--ghost" data-a="sheet-x">Annuler</button><button class="btn btn--ok" data-a="valider-ok" data-v="${f.id}" ${s.sign ? '' : 'disabled'}>✓ Valider</button></div>
+      ${s.sign ? '' : '<p class="foot__hint" style="margin-top:6px">Signez pour valider</p>'}`;
   }
   if (s.t === 'corriger') {
     const f = fiche(s.id), motifs = ['Photo manquante', 'Mauvais logement ou niveau'];
@@ -1556,10 +1568,12 @@ function act(p, a, v, ev) {
     case 'sheet-alob': p.sheet.alobees = ev.target.checked; break;
     case 'sheet-excel': p.sheet.excel = ev.target.checked; break;
     case 'sign-clear': d.sign = null; break;
+    case 'sign-clear-validation': p.sheet.sign = null; break;
     case 'valider-ok': {
       const f = fiche(+v), pr = P(p);
       f.statut = 'validee'; f.valideur = pr.valide === 'absence' ? pr.nom + ' (conducteur absent)' : pr.nom;
       f.histo.push(['Validée par ' + f.valideur, fmtD(AUJ) + ' ' + now()]); f.vu = { [p.profil]: 1, chef: 1 };
+      f.signValideur = p.sheet.sign; f.valideLe = fmtD(AUJ) + ' ' + pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60);
       const envoiExcel = p.sheet.excel, depotAlobees = p.sheet.alobees;
       p.sheet = null;
       if (depotAlobees) { f.dansAlobees = true; setTimeout(() => { log('Serveur', 'Alobees', `📁 ${f.num}.xlsx déposé dans Alobees › ${chantier(f.ch).nom} › Fiches incorporation (preuve)`, 't-mail'); renderAll(); }, 900); }
