@@ -406,7 +406,8 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
         <li>✓ <b>Alobees, testé avec la vraie clé</b> : 74 chantiers, arborescence complète des documents, PDF téléchargeables. Dans l'appli : dossiers Devis / Clients <b>masqués</b>, bâtiment / niveau / indice <b>lus dans le nom du fichier</b>, alerte quand un <b>nouvel indice</b> arrive. <i>Essai : patron › Registre › Tilleuls.</i></li>
         <li>✓ <b>Fiche sans programmation</b> toujours possible. À la réception, <b>comparaison</b> avec ce qui était prévu (date, logements restants, indice du plan). <i>Essai : conducteur › F-0143.</i></li>
         <li>✓ <b>Le conducteur signe au doigt</b> pour valider. Les deux signatures (auteur + conducteur) sont sur la fiche. <i>Essai : conducteur › une fiche reçue › Valider.</i></li>
-        <li>✓ <b>Alobees ne sert qu'aux plans et au Registre</b> (lecture seule). Les tâches, points de contrôle et rappels restent ceux décidés ensemble. Les incorporations sont programmées dans l'appli.</li>
+        <li>✓ <b>Alobees, en lecture seule</b> : plans, Registre (chantiers) et <b>incorporations déjà programmées dans Alobees</b>, reprises automatiquement (badge « 📁 programmée dans Alobees »). On peut aussi programmer dans l'appli. Les points de contrôle de la fiche (Fait / Anomalie) ne changent pas.</li>
+        <li>✓ <b>Mémoire des erreurs et rappels</b> gardés.</li>
         <li>✓ <b>Facturation gardée</b>. Adresse : euro.sanichauff@gmail.com.</li>
       </ol>
     </section>
@@ -486,8 +487,15 @@ function seed() {
     /* ce que la passerelle Alobees (lecture seule) trouverait */
     alobees: {
       chantiers: [['Résidence Les Tilleuls', 'Lille', true], ['Les Jardins du Parc', 'Armentières', true], ['Le Clos Saint-Jean', 'Lomme', true], ['Résidence Le Moulin', 'Wambrechies', false]],
+      /* incorporations déjà programmées dans Alobees (lecture seule) : reprises automatiquement */
+      taches: [
+        { id: 't1', nom: '1 Incorporation R+3 Bat A', ch: 'til', debut: '09/10/2026', equipe: ['Karim B.', 'Mehdi R.'] },
+        { id: 't2', nom: 'Incorporation R+1 Bat A', ch: 'clo', debut: '12/10/2026', equipe: ['Lucas P.'] },
+        { id: 't3', nom: '0 Passage fourreaux ECS et chauffage', ch: 'til', debut: '08/10/2026', equipe: ['Mehdi R.'] },
+      ],
     },
   };
+  SRV.alobees.taches.filter(t => estUneIncorporation(t.nom)).forEach(t => SRV.planning.push(planningDepuisTache(t)));
   const mk = (num, ch, bat, niv, logs, statut, auteur, ko, extra) => SRV.fiches.push(Object.assign({
     id: num, num: 'F-0' + num, ch, bat, niv, logs, statut, auteur, 
     date: '02/10/2026', coulage: '07/10/2026', chef: auteur, chefEq: 'Thomas L.', comps: auteur === 'Julien M.' ? ['Karim B.', 'Mehdi R.'] : ['Mehdi R.', 'Lucas P.'],
@@ -578,6 +586,17 @@ function lireNomPlan(nom) {
   };
 }
 
+/* « Incorporation » n'importe où dans le nom : les vrais noms commencent parfois par un numéro (« 1 Incorporation 60 Logements ») */
+const estUneIncorporation = nomTache => /incorporation/i.test(nomTache);
+/* Une tâche Alobees « Incorporation … » devient une incorporation programmée (rappel la veille, fiche pré-remplie) */
+function planningDepuisTache(tache) {
+  const c = chantier(tache.ch), lu = lireNomPlan(tache.nom);
+  const bat = c.bats.find(b => b.nom === lu.bat) || c.bats[0], niv = lu.niv ?? 0;
+  const logs = Array.from({ length: Math.min(bat.niv[niv] || 0, 6) }, (_, i) => code(niv, i + 1));   // une fiche = 6 logements max
+  const chefEq = tache.equipe.find(n => SRV.personnes.some(x => x[0] === n && x[1] === "Chef d'équipe")) || null;
+  return { id: ++PSEQ, source: 'alobees', tache: tache.id, ch: tache.ch, bat: bat.nom, niv, logs, date: tache.debut, coulage: null, chef: c.chef, chefEq, comps: tache.equipe.filter(n => n !== chefEq) };
+}
+
 /* ---- Alobees simulé : ce que la passerelle (lecture seule) verrait pour un chantier ---- */
 const DOSSIERS_MASQUES = /DEVIS|CLIENT|ADMINISTRATIF|FACTUR/i;   // jamais affichés dans l'appli
 /* Indice disponible dans Alobees. Tilleuls Bât A R+1 a un indice plus récent, pour montrer l'alerte. */
@@ -619,7 +638,7 @@ function comparerAuPlanning(f) {
   const restants = prevue.logs.filter(l => !f.logs.includes(l));
   const enPlus = f.logs.filter(l => !prevue.logs.includes(l));
   const lignes = [
-    `${prevue.date === f.date ? '✓' : '⚠'} Prévue le ${prevue.date.slice(0, 5)}, faite le ${f.date.slice(0, 5)}`,
+    `${prevue.date === f.date ? '✓' : '⚠'} Prévue le ${prevue.date.slice(0, 5)}${prevue.source === 'alobees' ? ' (dans Alobees)' : ''}, faite le ${f.date.slice(0, 5)}`,
     restants.length ? `⚠ Logements prévus mais pas sur cette fiche : <b>${restants.join(' ')}</b>` : '✓ Tous les logements prévus sont sur la fiche',
     enPlus.length ? `ℹ Logements en plus du planning : ${enPlus.join(' ')}` : '',
   ].filter(Boolean);
@@ -919,7 +938,7 @@ function viewIncHome(p) {
 }
 function cardProg(p, x) {
   const c = chantier(x.ch), demain = x.date === dateDemain();
-  return `<div class="prog"><strong style="color:var(--navy)">${demain ? 'Demain' : 'Le ' + x.date.slice(0, 5)} · ${h(c.nom)}</strong>
+  return `<div class="prog"><strong style="color:var(--navy)">${demain ? 'Demain' : 'Le ' + x.date.slice(0, 5)} · ${h(c.nom)}</strong>${x.source === 'alobees' ? ' <span class="pill p-envoyee">📁 programmée dans Alobees</span>' : ''}
     <div class="muted">${h(x.bat)} · ${nivL(x.niv)} · ${x.logs.join(' ')} · coulage ${x.coulage ? x.coulage.slice(0, 5) : 'à préciser'}</div>
     <div class="muted">Équipe : ${h([x.chef, x.chefEq, ...x.comps].filter(Boolean).join(', '))}</div>
     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn btn--sm btn--ghost" data-a="rappel-mat" data-v="${x.id}">🧰 Matériel à préparer</button>
