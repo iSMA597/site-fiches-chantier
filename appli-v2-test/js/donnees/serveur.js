@@ -12,8 +12,10 @@
   var CFG = root.ES_CONFIG || {};
   var actif = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && root.supabase && root.idbKeyval);
   var idb = root.idbKeyval;
-  // préfixe es2_ : l'appli v1 est publiée sur le même site, ses données (es_…) ne doivent jamais être touchées
-  var K = { outbox: 'es2_outbox', registre: 'es2_registre', profil: 'es2_profil' };
+  // préfixe propre à l'environnement (es2_ production, es2t_ test, es2d_ local) : l'appli v1, l'appli de test et la vraie
+  // appli sont sur le même site ; aucune ne doit toucher la session, les fiches ou le brouillon d'une autre
+  var P = (root.ES_CONFIG && root.ES_CONFIG.prefixe) || 'es2_';
+  var K = { outbox: P + 'outbox', registre: P + 'registre', profil: P + 'profil' };
   var DELAI_MS = 45000;
 
   // chaque appel réseau est limité dans le temps (réseau de chantier instable)
@@ -26,7 +28,7 @@
     return fetch(url, opts).finally(function () { clearTimeout(t); });
   }
   var sb = actif ? root.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: 'es2_auth', detectSessionInUrl: false },
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: P + 'auth', detectSessionInUrl: false },
     global: { fetch: fetchAvecDelai }
   }) : null;
   var ecouteurs = [];
@@ -64,7 +66,7 @@
     try { var r = await sb.auth.getSession(); return r.data && r.data.session; } catch (e) { return null; }
   }
   function sessionStockee() {
-    try { return !!localStorage.getItem('es2_auth'); } catch (e) { return false; }
+    try { return !!localStorage.getItem(P + 'auth'); } catch (e) { return false; }
   }
   // 'ok' : connecté · 'hors_ligne' : session gardée sur l'appareil mais serveur injoignable · 'absente' : se connecter
   async function etatSession() {
@@ -99,24 +101,24 @@
     var cles = [];
     try { cles = await idb.keys(); } catch (e) { /* ignoré */ }
     for (var i = 0; i < cles.length; i++) {
-      if (String(cles[i]).indexOf('es2_') === 0) { try { await idb.del(cles[i]); } catch (e) { /* ignoré */ } }
+      if (String(cles[i]).indexOf(P) === 0) { try { await idb.del(cles[i]); } catch (e) { /* ignoré */ } }
     }
-    try { ['es2_brouillon', 'es2_preparation', 'es2_dernier_compte'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
+    try { ['brouillon', 'preparation', 'dernier_compte'].forEach(function (k) { localStorage.removeItem(P + k); }); } catch (e) { /* ignoré */ }
   }
   async function deconnexion() {
     await desabonnerCeTelephone();                 // un téléphone partagé ne reçoit plus les notifications de ce compte
     try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* session locale effacée quand même */ }
-    try { localStorage.removeItem('es2_auth'); } catch (e) { /* ignoré */ }
+    try { localStorage.removeItem(P + 'auth'); } catch (e) { /* ignoré */ }
     await purgerDonneesLocales();
     notifier();
   }
   // téléphone partagé (audit lot F) : si un autre compte se connecte, les données du précédent sont effacées
   // AVANT tout envoi, pour qu'aucune fiche ni signature ne passe d'un compte à l'autre
-  function dernierCompte() { try { return localStorage.getItem('es2_dernier_compte'); } catch (e) { return null; } }
+  function dernierCompte() { try { return localStorage.getItem(P + 'dernier_compte'); } catch (e) { return null; } }
   async function verifierProprietaire(profileId) {
     var dernier = dernierCompte(), change = !!dernier && dernier !== profileId;
     if (change) await purgerDonneesLocales();
-    try { localStorage.setItem('es2_dernier_compte', profileId); } catch (e) { /* ignoré */ }
+    try { localStorage.setItem(P + 'dernier_compte', profileId); } catch (e) { /* ignoré */ }
     return change;
   }
   async function profil() {
@@ -217,8 +219,8 @@
   // reporte la version serveur sur le brouillon en cours (évite qu'une modification ultérieure soit perdue)
   function reporterVersion(row) {
     try {
-      var b = JSON.parse(localStorage.getItem('es2_brouillon') || 'null');
-      if (b && b.id === row.id) { b.serverVersion = row.version; localStorage.setItem('es2_brouillon', JSON.stringify(b)); }
+      var b = JSON.parse(localStorage.getItem(P + 'brouillon') || 'null');
+      if (b && b.id === row.id) { b.serverVersion = row.version; localStorage.setItem(P + 'brouillon', JSON.stringify(b)); }
     } catch (e) { /* ignoré */ }
   }
 
@@ -291,7 +293,7 @@
   function notifier(info) { ecouteurs.forEach(function (fn) { try { fn(info); } catch (e) { /* ignoré */ } }); }
 
   // ------------------------------------------------------------ photos des fiches (IndexedDB -> Storage)
-  function clePhotos(ficheId) { return 'es2_photos_' + ficheId; }
+  function clePhotos(ficheId) { return P + 'photos_' + ficheId; }
   async function photos(ficheId) { return (await idb.get(clePhotos(ficheId))) || []; }
   async function enregistrerPhotos(ficheId, liste) { await idb.set(clePhotos(ficheId), liste); }
   async function supprimerPhotos(ficheId) { try { await idb.del(clePhotos(ficheId)); } catch (e) { /* ignoré */ } }

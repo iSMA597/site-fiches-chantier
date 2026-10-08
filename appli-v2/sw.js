@@ -1,6 +1,8 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-lotF-1';
+var VERSION = 'fiches-v2-lotF-2';
+// un cache par adresse : l'appli de test et la vraie appli ne s'effacent jamais l'une l'autre
+var CACHE = VERSION + '|' + self.registration.scope;
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js', 'js/vendor/qrcode.js',
@@ -19,7 +21,7 @@ function toujoursFrais(req, url) {
 }
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(VERSION).then(function (c) {
+  e.waitUntil(caches.open(CACHE).then(function (c) {
     return c.addAll(FICHIERS.map(function (f) { return new Request(f, { cache: 'reload' }); }));
   }).then(function () { return self.skipWaiting(); }));
 });
@@ -27,7 +29,12 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (cles) {
     // seulement les anciennes versions de la V2 : le cache de la v1 (même site) n'est jamais touché
-    return Promise.all(cles.filter(function (k) { return k.indexOf('fiches-v2-') === 0 && k !== VERSION; }).map(function (k) { return caches.delete(k); }));
+    var monScope = '|' + self.registration.scope;
+    return Promise.all(cles.filter(function (k) {
+      var ancienneVersionSansAdresse = k.indexOf('fiches-v2-') === 0 && k.indexOf('|') < 0;
+      var ancienneVersionDeCetteAppli = k.indexOf('fiches-v2-') === 0 && k.slice(-monScope.length) === monScope && k !== CACHE;
+      return ancienneVersionSansAdresse || ancienneVersionDeCetteAppli;
+    }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 
@@ -37,7 +44,7 @@ self.addEventListener('fetch', function (e) {
   e.respondWith(fetch(e.request, toujoursFrais(e.request, url) ? { cache: 'no-cache' } : undefined).then(function (r) {
     if (r && r.ok && r.type === 'basic') {
       var copie = r.clone();
-      e.waitUntil(caches.open(VERSION).then(function (c) { return c.put(e.request, copie); }));
+      e.waitUntil(caches.open(CACHE).then(function (c) { return c.put(e.request, copie); }));
       return r;
     }
     return caches.match(e.request, { ignoreSearch: true }).then(function (m) { return m || r; });

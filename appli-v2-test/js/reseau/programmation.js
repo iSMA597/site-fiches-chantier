@@ -81,7 +81,7 @@
   }
 
   // ------------------------------------------------------------ rappels de la veille (ouverts depuis la notification ou la carte)
-  var CLE_PREPARATION = 'es2_preparation';       // cases cochées, gardées sur ce téléphone
+  var CLE_PREPARATION = ((root.ES_CONFIG && root.ES_CONFIG.prefixe) || 'es2_') + 'preparation';   // cases cochées, gardées sur ce téléphone
   function preparation() { try { return JSON.parse(localStorage.getItem(CLE_PREPARATION) || '{}'); } catch (e) { return {}; } }
   function boiteMemoire(memoire, titre) {
     if (!memoire || !memoire.length) return '<div class="lock">👍 Aucun point oublié en mémoire sur ce chantier</div>';

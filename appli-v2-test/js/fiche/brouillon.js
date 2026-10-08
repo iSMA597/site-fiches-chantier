@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var ES = root.ES = root.ES || {};
-  var CLE = 'es2_brouillon';
+  var CLE = ((root.ES_CONFIG && root.ES_CONFIG.prefixe) || 'es2_') + 'brouillon';
   var ETAPES = ['Chantier', 'Emplacement', 'Équipe', 'Documents', 'Matériel', 'Contrôles', 'Photos', 'Envoi'];
   var LOGEMENTS_MAX = 6;   // une fiche couvre 6 logements au plus (gabarit papier)
 

@@ -7,7 +7,7 @@
   'use strict';
   var ES = root.ES = root.ES || {};
   var o = ES.outils, h = o.h;
-  var CLE_AIDE_IPHONE = 'es2_aide_iphone_vue';
+  var CLE_AIDE_IPHONE = ((root.ES_CONFIG && root.ES_CONFIG.prefixe) || 'es2_') + 'aide_iphone_vue';
 
   function estIphone() { return /iPhone|iPad|iPod/.test(navigator.userAgent); }
   function estInstallee() { return root.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; }
