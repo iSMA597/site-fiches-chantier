@@ -124,8 +124,8 @@
       '<table class="tbl"><thead><tr><th>Bâtiment</th><th>Niveau</th><th>Logements</th><th></th></tr></thead><tbody>' +
       s.proposition.map(function (r, i) {
         return '<tr class="' + (r.doute ? 'doubt' : '') + '"><td>' + h(r.batiment) + '</td><td>' + o.nivL(r.num) + '</td>' +
-          '<td><span class="stepper"><button data-a="import-nb" data-v="' + i + '|-1" aria-label="moins">−</button><b>' + r.nb + '</b>' +
-          '<button data-a="import-nb" data-v="' + i + '|1" aria-label="plus">+</button></span></td>' +
+          '<td><span class="stepper"><button data-a="import-nb" data-v="' + i + '|-1" aria-label="Un logement de moins (' + h(r.batiment + ' ' + o.nivL(r.num)) + ')">−</button><b>' + r.nb + '</b>' +
+          '<button data-a="import-nb" data-v="' + i + '|1" aria-label="Un logement de plus (' + h(r.batiment + ' ' + o.nivL(r.num)) + ')">+</button></span></td>' +
           '<td>' + (r.doute ? '<button class="btn btn--sm btn--ghost" data-a="import-ok" data-v="' + i + '" title="' + h(r.doute) + '">⚠ Confirmer</button>' : '✓') + '</td></tr>';
       }).join('') + '</tbody></table>' +
       (doutes ? '<p class="foot__hint">' + o.pluriel(doutes, 'ligne') + ' à vérifier : ' + s.proposition.filter(function (r) { return r.doute; }).map(function (r) { return h(r.doute); }).join(' · ') + '</p>' : '') +

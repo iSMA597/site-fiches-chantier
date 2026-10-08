@@ -17,6 +17,10 @@
   }
   function etatReseau() {
     var attente = (ES.etat.outbox || []).filter(function (e) { return !e.recue; }).length;
+    if (ES.etat.sessionExpiree) {
+      return '<div class="bandeau bandeau--off">🔒 Session expirée : reconnectez-vous pour envoyer vos fiches (rien n\'est perdu). ' +
+        '<button class="link" data-a="reconnecter">Se reconnecter</button></div>';
+    }
     if (!navigator.onLine) return '<div class="bandeau bandeau--off">✈ Hors réseau : les fiches partiront toutes seules au retour du réseau' + (attente ? ' (' + attente + ' en attente)' : '') + '</div>';
     if (attente) return '<div class="bandeau">🔄 ' + o.pluriel(attente, 'fiche') + ' en attente d\'envoi <button class="link" data-a="envoyer-maintenant">Envoyer maintenant</button></div>';
     return '';
@@ -24,12 +28,13 @@
   function ligne(fiche, statut, classe, ouvrable, detail, nouvelle) {
     var c = ES.assistant.chantier(fiche.chantier_id) || { nom: 'Chantier' };
     var ko = fiche.ko || 0;
-    var corps = (nouvelle ? '<span class="point-nouveau" aria-label="Nouvelle"></span>' : '') +
+    var corps = (nouvelle ? '<span class="point-nouveau" aria-hidden="true"></span><span class="sr-only">Nouvelle. </span>' : '') +
       '<div class="row-btn__main"><strong>' + h(c.nom) + '</strong><span>' + h(ES.assistant.lieu(fiche)) + '</span>' +
       '<span>' + h(detail) + '</span><span class="pills"><span class="pill ' + classe + '">' + h(statut) + '</span>' +
       (ko ? '<span class="pill p-ko">⚠ ' + o.pluriel(ko, 'anomalie') + '</span>' : '') + '</span></div>';
-    return ouvrable ? '<button class="row-btn" data-a="ouvrir" data-v="' + fiche.id + '">' + corps + '<span class="chev" aria-hidden="true">›</span></button>'
-      : '<div class="row-btn">' + corps + '</div>';
+    if (ouvrable) return '<button class="row-btn" data-a="ouvrir" data-v="' + fiche.id + '">' + corps + '<span class="chev" aria-hidden="true">›</span></button>';
+    // fiche refusée par le serveur (erreur définitive) : on peut la retirer du téléphone
+    return '<div class="row-btn">' + corps + (classe === 'p-ko' ? '<button class="btn btn--sm btn--ko" data-a="outbox-retirer" data-v="' + fiche.id + '">Supprimer</button>' : '') + '</div>';
   }
   function ligneServeur(f, montrerAuteur) {
     var s = ES.reception.statut(f);
@@ -64,7 +69,7 @@
     var lignes = [];
     if (createur) {
       var n = badge(), onglet = ES.etat.onglet || 'mes';
-      out += '<div class="segment" role="tablist"><button data-a="onglet" data-v="mes" aria-pressed="' + (onglet === 'mes') + '">Mes fiches</button>' +
+      out += '<div class="segment" role="group" aria-label="Fiches affichées"><button data-a="onglet" data-v="mes" aria-pressed="' + (onglet === 'mes') + '">Mes fiches</button>' +
         '<button data-a="onglet" data-v="recues" aria-pressed="' + (onglet === 'recues') + '">Reçues' + (n ? ' <span class="badge">' + n + '</span>' : '') + '</button></div>';
       if (onglet === 'mes') {
         (ES.etat.outbox || []).filter(function (e) { return !e.recue; }).forEach(function (e) {
@@ -134,6 +139,13 @@
       o.toast('Brouillon abandonné');
     },
     'envoyer-maintenant': function () { ES.app.synchroniser(); },
+    'outbox-retirer': async function (v) {
+      if (!root.confirm('Supprimer cette fiche du téléphone ? Elle n\'a pas été reçue par le bureau et sera perdue.')) return;
+      await root.Cloud.retirer(v);
+      await root.Cloud.supprimerPhotos(v);
+      await ES.app.rafraichirListe();
+      o.toast('Fiche supprimée du téléphone');
+    },
     'compte': async function () { ES.etat.feuille = { type: 'compte', notifications: await ES.notifications.etat() }; },
     'deconnexion': async function () {
       await root.Cloud.deconnexion();

@@ -19,13 +19,27 @@
   function enregistrer() { ES.brouillon.sauver(ES.etat.brouillon); }
 
   // ------------------------------------------------------------ cadre : haut, carrés d'étapes, bas
+  // le chantier, le bâtiment ou le niveau du brouillon n'existe plus (chantier archivé, structure modifiée)
+  function brouillonOrphelin(b) {
+    if (!b.chantier_id) return false;
+    var c = chantier(b.chantier_id);
+    if (!c) return true;
+    if (b.batiment_id && !batiment(c, b.batiment_id)) return true;
+    return !!(b.niveau_id && !niveau(batiment(c, b.batiment_id), b.niveau_id));
+  }
   function vue() {
     var b = brouillon(), n = b.etape;
+    if (brouillonOrphelin(b)) {
+      return { haut: '<div class="top"><button class="top__back" data-a="quitter" aria-label="Quitter">✕</button><div class="top__t"><strong>Fiche en cours</strong><span>Chantier indisponible</span></div></div>',
+        contenu: '<div class="alert">Ce chantier (ou ce niveau) n\'est plus disponible pour vous : il a été archivé ou modifié dans le Registre.</div>' +
+          '<button class="btn btn--ko btn--block" data-a="abandonner">Abandonner ce brouillon</button>', bas: '' };
+    }
     var carres = ES.brouillon.ETAPES.map(function (titre, i) {
       var k = i + 1, fait = ES.brouillon.etapeFaite(b, k), rouge = aReprendre(b, k);
       var ouvert = ES.brouillon.accessible(b, k) && (k <= b.vues || ES.brouillon.etapeFaite(b, k - 1));
       return '<button data-a="etape" data-v="' + k + '" class="' + (rouge ? 'redo' : fait ? 'done' : '') + '"' + (k === n ? ' aria-current="step"' : '') +
-        (ouvert ? '' : ' disabled') + ' aria-label="Étape ' + k + ' : ' + titre + (fait ? ' (faite)' : '') + '" title="' + titre + '">' + k + '<span>' + titre + '</span></button>';
+        (ouvert ? '' : ' disabled') + ' aria-label="Étape ' + k + ' : ' + titre + (rouge ? ' (à reprendre)' : fait ? ' (faite)' : '') + '" title="' + titre + '">' +
+        k + (rouge ? '!' : fait ? '✓' : '') + '<span>' + titre + '</span></button>';
     }).join('');
     var haut = '<div class="top"><button class="top__back" data-a="quitter" aria-label="Quitter (le brouillon est gardé)">✕</button>' +
       '<div class="top__t"><strong>' + (b.correctionDe ? 'Correction' : 'Nouvelle fiche') + '</strong><span>Étape ' + n + '/8 · ' + ES.brouillon.ETAPES[n - 1] + '</span></div></div>' +
@@ -83,8 +97,10 @@
   function puce(action, valeur, active, texte, desactivee) {
     return '<button class="chip" data-a="' + action + '" data-v="' + h(valeur) + '" aria-pressed="' + active + '"' + (desactivee ? ' disabled' : '') + '>' + h(texte) + '</button>';
   }
+  var numeroChamp = 0;
   function champ(titre, contenu, aide) {
-    return '<div class="field"><div class="field__l">' + titre + (aide ? ' <small>' + aide + '</small>' : '') + '</div><div class="chips">' + contenu + '</div></div>';
+    var id = 'champ-' + (++numeroChamp);
+    return '<div class="field" role="group" aria-labelledby="' + id + '"><div class="field__l" id="' + id + '">' + titre + (aide ? ' <small>' + aide + '</small>' : '') + '</div><div class="chips">' + contenu + '</div></div>';
   }
   function etapeEmplacement(b) {
     var c = chantier(b.chantier_id), bt = batiment(c, b.batiment_id), nv = niveau(bt, b.niveau_id);
@@ -144,7 +160,7 @@
         '<div class="pt__b" role="group" aria-labelledby="l-' + p.id + '">' +
         '<button class="b-ok" data-a="reponse" data-v="' + p.id + '|OK" aria-pressed="' + (r === 'OK') + '">✓ Fait</button>' +
         '<button class="b-ko" data-a="reponse" data-v="' + p.id + '|KO" aria-pressed="' + (r === 'KO') + '">✗ Anomalie</button></div>' +
-        (r === 'KO' ? '<textarea rows="2" maxlength="500" data-saisie="note" data-v="' + p.id + '" placeholder="Que se passe-t-il ? (facultatif)" aria-label="Note sur l\'anomalie">' + h(b.notes[p.id] || '') + '</textarea>' : '') +
+        (r === 'KO' ? '<textarea rows="2" maxlength="500" data-saisie="note" data-v="' + p.id + '" placeholder="Que se passe-t-il ? (facultatif)" aria-label="Note sur l\'anomalie : ' + h(p.label) + '">' + h(b.notes[p.id] || '') + '</textarea>' : '') +
         '</div>';
     }).join('');
     return out;
@@ -187,7 +203,7 @@
       '<div class="muted">' + h(c.nom) + ' · ' + h(lieu(b)) + ' · coulage ' + o.frDate(b.coulage) + '</div>' +
       '<div class="muted">' + o.pluriel(ES.etat.photos.length, 'photo') + ' · ' + h([b.chef, b.chef_equipe].concat(b.compagnons).filter(Boolean).join(', ')) + '</div>' +
       (anomalies.length ? '<div class="txt-ko recap__ko">' + anomalies.map(function (p) { return '✗ ' + h(p.label); }).join('<br>') + '</div>' : '') + '</div>' +
-      '<div class="field"><div class="field__l">Observations <small>facultatif</small></div><textarea rows="2" maxlength="2000" data-saisie="observations" placeholder="Une remarque pour le conducteur ?">' + h(b.observations) + '</textarea></div>' +
+      '<div class="field"><label class="field__l" for="observations">Observations <small>facultatif</small></label><textarea id="observations" rows="2" maxlength="2000" data-saisie="observations" placeholder="Une remarque pour le conducteur ?">' + h(b.observations) + '</textarea></div>' +
       '<div class="info"><b>La fiche sera envoyée à :</b><br>🏢 ' + d.bureau.map(h).join(' · ') +
       (d.equipe.length ? '<br>👷 Équipe (reçoit la fiche et le plan) : ' + d.equipe.map(h).join(' · ') : '') + '</div>' +
       '<label class="check check--petit"><input type="checkbox" data-a="excel-demande"' + (b.excel_demande ? ' checked' : '') + '>' +
@@ -205,6 +221,7 @@
   // ------------------------------------------------------------ fiche prête pour l'envoi et pour l'Excel
   function ficheAEnvoyer(b) {
     var c = chantier(b.chantier_id), bt = batiment(c, b.batiment_id), nv = niveau(bt, b.niveau_id);
+    if (!c || !bt || !nv) throw new Error('Ce chantier ou ce niveau n\'est plus disponible : la fiche ne peut pas partir.');
     var items = {};
     ES.gabarit.tousLesPoints().forEach(function (p) { if (b.items[p.id]) items[p.id] = b.items[p.id]; });
     var notes = {};
@@ -271,10 +288,9 @@
       b.logements = [];
       for (var k = 1; k <= nv.logements; k++) b.logements.push(o.codeLogement(nv.num, k));
     },
-    'voir-plan': async function (v) {
+    'voir-plan': function (v) {
       var plan = (chantier(brouillon().chantier_id).plans || []).filter(function (p) { return p.id === v; })[0];
-      try { root.open(await root.Cloud.urlPlan(plan), '_blank', 'noopener'); }
-      catch (e) { o.toast('Plan indisponible sans réseau'); }
+      return o.ouvrirOnglet(root.Cloud.urlPlan(plan));
     },
     'choisir-coulage': function (v) { brouillon().coulage = v; },
     'choisir-chef': function (v) { brouillon().chef = v; },

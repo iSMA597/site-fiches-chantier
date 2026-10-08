@@ -69,7 +69,7 @@
         var niveau = a.associations[f.doc_id] || f.niveau_id;
         if (!niveau) {
           return '<div class="pick pick--grise pick--col"><span>📄 ' + h(f.nom) + '</span><span class="muted">? niveau non reconnu : à associer à la main</span>' +
-            '<select class="inp" data-saisie="alobees-niveau" data-v="' + h(f.doc_id) + '"><option value="">Associer à un niveau…</option>' +
+            '<select class="inp" data-saisie="alobees-niveau" data-v="' + h(f.doc_id) + '" aria-label="Niveau pour ' + h(f.nom) + '"><option value="">Associer à un niveau…</option>' +
             niveaux.map(function (n) { return '<option value="' + n.id + '">' + h(n.nom) + '</option>'; }).join('') + '</select></div>';
         }
         var nom = (niveaux.filter(function (n) { return n.id === niveau; })[0] || {}).nom || '';

@@ -133,7 +133,7 @@
     out += blocPlans(c, ed) + blocEquipe(c, ed);
     if (ed) {
       out += '<h3>Importer la structure</h3><p class="lead">Depuis la liste des lots, un descriptif ou un tableau du client. L\'appli fait une proposition, vous vérifiez, puis vous enregistrez.</p>' +
-        '<label class="btn btn--ghost btn--block">📊 Excel / CSV / 📄 PDF<input type="file" accept=".xlsx,.csv,.pdf,application/pdf" data-saisie="import-structure" hidden></label>';
+        '<label class="btn btn--ghost btn--block">📊 Excel / CSV / 📄 PDF<input type="file" accept=".xlsx,.csv,.pdf,application/pdf" data-saisie="import-structure" class="vh"></label>';
     }
     return { haut: haut('Registre', c.nom, 'reg-retour'), contenu: out, bas: ES.onglets.barre('reg') };
   }
@@ -152,7 +152,8 @@
       if (r.avertissements && r.avertissements.length) o.toast(r.avertissements.join(' · '));
       await charger();
       await ES.app.rafraichirRegistreFiches();
-    } catch (e) { o.toast(e.message); await charger(); }
+      return r.chantier;
+    } catch (e) { o.toast(e.message, true); await charger(); return null; }
   }
 
   // ------------------------------------------------------------ feuilles : infos du chantier, ajout d'un plan
@@ -186,9 +187,9 @@
       if (!c.nom) { o.toast('Indiquez le nom du chantier'); return; }
       var nouveau = !c.id;
       ES.etat.feuille = null;
-      await enregistrer(c, nouveau ? [] : structureDe(chantierOuvert()), nouveau ? [] : null);
+      var enregistre = await enregistrer(c, nouveau ? [] : structureDe(chantierOuvert()), nouveau ? [] : null);
       if (nouveau) {
-        var cree = (ES.etat.reg.chantiers || []).filter(function (x) { return x.nom === c.nom; })[0];
+        var cree = enregistre && (ES.etat.reg.chantiers || []).filter(function (x) { return x.id === enregistre.id; })[0];
         if (cree) { ES.etat.ecran = { n: 'reg-chantier', id: cree.id }; ES.etat.reg.chantierId = cree.id; await chargerPlans(cree.id); }
       }
     },
@@ -237,7 +238,9 @@
       });
     },
     'reg-ajout-batiment': function () {
-      var c = chantierOuvert(), lettre = String.fromCharCode(65 + (c.batiments || []).length);
+      var c = chantierOuvert(), pris = (c.batiments || []).map(function (b) { return b.nom; }), k = 0;
+      while (pris.indexOf('Bât ' + String.fromCharCode(65 + k)) >= 0) k++;            // première lettre libre
+      var lettre = String.fromCharCode(65 + k);
       var s = structureDe(c);
       s.push({ batiment: 'Bât ' + lettre, num: 0, nb: 3 }, { batiment: 'Bât ' + lettre, num: 1, nb: 3 });
       return enregistrer(c, s);
@@ -248,9 +251,9 @@
       return enregistrer(c, structureDe(c), affectes);
     },
     'reg-plan-ajout': function (v) { ES.etat.feuille = { type: 'plan-ajout', niveau: v }; },
-    'reg-voir-plan': async function (v) {
+    'reg-voir-plan': function (v) {
       var plan = (ES.etat.reg.plans || []).filter(function (p) { return p.id === v; })[0];
-      try { root.open(await root.Cloud.urlPlan(plan), '_blank', 'noopener'); } catch (e) { o.toast('Plan indisponible sans réseau'); }
+      return o.ouvrirOnglet(root.Cloud.urlPlan(plan));
     }
   };
 

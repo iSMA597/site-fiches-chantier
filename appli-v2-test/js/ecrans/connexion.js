@@ -84,7 +84,10 @@
     'connexion-passkey': async function () {
       ES.etat.erreurConnexion = null;
       try { await root.Cloud.connexionPasskey(); await ES.app.chargerSession(); }
-      catch (e) { ES.etat.erreurConnexion = 'Face ID / empreinte pas encore activé sur ce téléphone : connectez-vous une fois avec le mot de passe.'; }
+      catch (e) {
+        ES.etat.erreurConnexion = e.reseau ? 'Pas de connexion au serveur : réessayez quand le réseau revient.'
+          : 'Face ID / empreinte pas encore activé sur ce téléphone : connectez-vous une fois avec le mot de passe.';
+      }
     },
     'passkey-oui': async function () {
       try { await root.Cloud.enregistrerPasskey(); o.toast('🔐 Face ID / empreinte activé'); }

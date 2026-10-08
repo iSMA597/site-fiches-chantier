@@ -34,7 +34,11 @@
   function puce(action, valeur, active, texte, desactivee) {
     return '<button class="chip" data-a="' + action + '" data-v="' + h(valeur) + '" aria-pressed="' + active + '"' + (desactivee ? ' disabled' : '') + '>' + h(texte) + '</button>';
   }
-  function champ(titre, contenu) { return '<div class="field"><div class="field__l">' + titre + '</div><div class="chips">' + contenu + '</div></div>'; }
+  var numeroChamp = 0;
+  function champ(titre, contenu) {
+    var id = 'prog-champ-' + (++numeroChamp);
+    return '<div class="field" role="group" aria-labelledby="' + id + '"><div class="field__l" id="' + id + '">' + titre + '</div><div class="chips">' + contenu + '</div></div>';
+  }
   function vueProgrammer() {
     var f = ES.etat.programmation, r = ES.etat.registre;
     var c = ES.assistant.chantier(f.chantier_id), bt = c && c.batiments.filter(function (b) { return b.id === f.batiment_id; })[0];
@@ -71,8 +75,8 @@
     var restants = prevue.logements.filter(function (l) { return f.logements.indexOf(l) < 0; });
     var enPlus = f.logements.filter(function (l) { return prevue.logements.indexOf(l) < 0; });
     var lignes = [(prevue.date_prevue === f.date_fiche ? '✓' : '⚠') + ' Prévue le ' + o.frDate(prevue.date_prevue) + ', faite le ' + o.frDate(f.date_fiche),
-      restants.length ? '⚠ Logements prévus mais pas sur cette fiche : <b>' + restants.join(' ') + '</b>' : '✓ Tous les logements prévus sont sur la fiche'];
-    if (enPlus.length) lignes.push('ℹ Logements en plus du planning : ' + enPlus.join(' '));
+      restants.length ? '⚠ Logements prévus mais pas sur cette fiche : <b>' + h(restants.join(' ')) + '</b>' : '✓ Tous les logements prévus sont sur la fiche'];
+    if (enPlus.length) lignes.push('ℹ Logements en plus du planning : ' + h(enPlus.join(' ')));
     return '<div class="' + (restants.length ? 'warnbox' : 'info') + '"><b>🔎 Comparaison avec le planning</b><ul>' + lignes.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul></div>';
   }
 
@@ -169,6 +173,7 @@
       } catch (e) { o.toast(e.message); }
     },
     'demarrer': async function (v) {
+      if (!(await ES.brouillon.remplacerAvecAccord())) return;
       var x = (ES.etat.programmations || []).filter(function (p) { return p.id === v; })[0];
       var b = ES.brouillon.nouveau(ES.etat.profil);
       Object.assign(b, { chantier_id: x.chantier_id, batiment_id: x.batiment_id, niveau_id: x.niveau_id, logements: x.logements.slice(),

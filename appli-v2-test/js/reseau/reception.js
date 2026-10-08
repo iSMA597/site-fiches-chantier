@@ -112,7 +112,7 @@
         }).join('');
       }).join('') +
       '<h5>Précision pour l\'équipe <small class="muted">facultatif</small></h5>' +
-      '<textarea rows="2" maxlength="1000" data-saisie-feuille="note" placeholder="Ex. reprendre la nourrice du 012">' + h(ES.etat.feuille.note || '') + '</textarea>' +
+      '<textarea rows="2" maxlength="1000" data-saisie-feuille="note" aria-label="Précision pour l\'équipe (facultatif)" placeholder="Ex. reprendre la nourrice du 012">' + h(ES.etat.feuille.note || '') + '</textarea>' +
       '<div class="foot__row foot__row--marge"><button class="btn btn--ghost" data-a="fermer-feuille">Annuler</button>' +
       '<button class="btn btn--ko" data-a="renvoyer-ok"' + (choisis.length || (ES.etat.feuille.note || '').trim() ? '' : ' disabled') + '>↩ Renvoyer (' + o.pluriel(choisis.length, 'point') + ')</button></div>';
   }
@@ -152,6 +152,7 @@
 
   var ACTIONS = {
     'ouvrir': async function (v) {
+      ES.etat.feuille = null;                          // ouverte depuis une feuille (coulage, logement) : la feuille se ferme
       ES.etat.ecran = { n: 'fiche', id: v };
       ES.etat.ficheOuverte = null;
       ES.app.afficher();
@@ -161,10 +162,10 @@
         ES.etat.vues = (ES.etat.vues || []).concat([v]);
       } catch (e) { o.toast(e.message); ES.etat.ecran = { n: 'accueil' }; }
     },
-    'voir-plan-fiche': async function (v) {
+    'voir-plan-fiche': function (v) {
       var c = ES.assistant.chantier(ES.etat.ficheOuverte.chantier_id) || { plans: [] };
       var plan = c.plans.filter(function (p) { return p.id === v; })[0];
-      try { root.open(await root.Cloud.urlPlan(plan), '_blank', 'noopener'); } catch (e) { o.toast('Plan indisponible sans réseau'); }
+      return o.ouvrirOnglet(root.Cloud.urlPlan(plan));
     },
     'valider': function () { ES.etat.feuille = { type: 'valider', signature: null, excel: !!ES.etat.ficheOuverte.excel_demande }; },
     'effacer-signature-validation': function () { ES.etat.feuille.signature = null; },
@@ -201,6 +202,7 @@
       ES.etat.feuille = null;
     },
     'corriger-maintenant': async function () {
+      if (!(await ES.brouillon.remplacerAvecAccord())) return;
       ES.etat.brouillon = brouillonDeCorrection(ES.etat.ficheOuverte);
       ES.brouillon.sauver(ES.etat.brouillon);
       ES.etat.photos = [];

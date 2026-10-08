@@ -94,16 +94,30 @@
     return r.data.session;
   }
   // déconnexion : rien ne reste sur un téléphone partagé (fiches non envoyées incluses, après confirmation côté écran)
-  async function deconnexion() {
-    await desabonnerCeTelephone();                 // un téléphone partagé ne reçoit plus les notifications de ce compte
-    try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* session locale effacée quand même */ }
+  // efface les données de l'appli gardées sur le téléphone (fiches en attente, brouillon, photos, cases cochées)
+  async function purgerDonneesLocales() {
     var cles = [];
     try { cles = await idb.keys(); } catch (e) { /* ignoré */ }
     for (var i = 0; i < cles.length; i++) {
       if (String(cles[i]).indexOf('es2_') === 0) { try { await idb.del(cles[i]); } catch (e) { /* ignoré */ } }
     }
-    try { ['es2_auth', 'es2_brouillon', 'es2_preparation'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
+    try { ['es2_brouillon', 'es2_preparation', 'es2_dernier_compte'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
+  }
+  async function deconnexion() {
+    await desabonnerCeTelephone();                 // un téléphone partagé ne reçoit plus les notifications de ce compte
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* session locale effacée quand même */ }
+    try { localStorage.removeItem('es2_auth'); } catch (e) { /* ignoré */ }
+    await purgerDonneesLocales();
     notifier();
+  }
+  // téléphone partagé (audit lot F) : si un autre compte se connecte, les données du précédent sont effacées
+  // AVANT tout envoi, pour qu'aucune fiche ni signature ne passe d'un compte à l'autre
+  function dernierCompte() { try { return localStorage.getItem('es2_dernier_compte'); } catch (e) { return null; } }
+  async function verifierProprietaire(profileId) {
+    var dernier = dernierCompte(), change = !!dernier && dernier !== profileId;
+    if (change) await purgerDonneesLocales();
+    try { localStorage.setItem('es2_dernier_compte', profileId); } catch (e) { /* ignoré */ }
+    return change;
   }
   async function profil() {
     try {
@@ -216,7 +230,9 @@
   }
   async function executerSync() {
     var res = { envoyees: 0, erreurs: 0, restantes: 0, recues: [], photosEchec: 0 };
-    if (!sb || !navigator.onLine || !(await session())) { res.restantes = (await outbox()).length; return res; }
+    var s = sb && navigator.onLine ? await session() : null;
+    // pas de session, ou session d'un autre compte que celui qui a rempli les fiches : on n'envoie rien
+    if (!s || (dernierCompte() && s.user.id !== dernierCompte())) { res.restantes = (await outbox()).length; return res; }
     var liste = await outbox();
     for (var i = 0; i < liste.length; i++) {
       var e = liste[i];
@@ -230,7 +246,8 @@
           r = await sb.rpc('enregistrer_fiche', { f: versServeur(e.fiche) });
         }
         if (r.error) {
-          if (estReseau(r.error) || estSession(r.error)) break;    // transitoire : on réessaiera
+          if (estSession(r.error)) { res.sessionExpiree = true; break; }   // à reconnecter (même compte : rien n'est perdu)
+          if (estReseau(r.error)) break;                                  // transitoire : on réessaiera
           await majOutbox(function (o) {
             o.forEach(function (x) {
               if (x.id === e.id && x.rev === rev) { x.erreur = traduire(r.error).message; x.conflit = r.error.code === 'P0001'; x.essais++; }
@@ -513,7 +530,7 @@
     actif: actif, client: sb, traduire: traduire, versCourriel: versCourriel,
     session: session, etatSession: etatSession, connexion: connexion, deconnexion: deconnexion, profil: profil, registre: registre,
     outbox: outbox, mettreEnFile: mettreEnFile, retirer: retirer, synchroniser: synchroniser, surChangement: surChangement,
-    tableauBord: tableauBord, logements: logements, fiches: fiches, fiche: fiche, valider: valider,
+    verifierProprietaire: verifierProprietaire, tableauBord: tableauBord, logements: logements, fiches: fiches, fiche: fiche, valider: valider,
     fichesVisibles: fichesVisibles, monId: monId,
     marquerVue: marquerVue, mesVues: mesVues, validerFiche: validerFiche, renvoyerACorriger: renvoyerACorriger,
     memoire: memoire, programmations: programmations, programmer: programmer,

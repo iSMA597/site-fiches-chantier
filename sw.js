@@ -1,5 +1,5 @@
 /* Service worker : fonctionnement hors ligne (cache de l'application). Changer VERSION à chaque mise à jour. */
-var VERSION = 'fiches-v1.3.1';
+var VERSION = 'fiches-v1.3.2';
 var FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'js/app.js', 'js/fiche-xlsx.js',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js', 'js/config.js', 'js/cloud.js', 'js/plateforme.js',
@@ -19,7 +19,8 @@ self.addEventListener('install', function (e) {
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== VERSION; }).map(function (k) { return caches.delete(k); }));
+    // seulement les anciennes versions de la v1 : le cache de la V2 (même site) n'est jamais touché
+    return Promise.all(keys.filter(function (k) { return k.indexOf('fiches-v1') === 0 && k !== VERSION; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 

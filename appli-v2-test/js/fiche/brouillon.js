@@ -65,6 +65,17 @@
     return '';
   }
 
-  ES.brouillon = { ETAPES: ETAPES, LOGEMENTS_MAX: LOGEMENTS_MAX, nouveau: nouveau, charger: charger, sauver: sauver,
+  // une fiche est déjà en cours : on demande avant de la remplacer (ses photos sont alors effacées)
+  async function remplacerAvecAccord() {
+    var b = ES.etat.brouillon;
+    if (!b) return true;
+    if (!root.confirm('Une fiche est déjà en cours sur ce téléphone. La remplacer ? Elle sera perdue.')) return false;
+    await root.Cloud.supprimerPhotos(b.id);
+    effacer();
+    ES.etat.brouillon = null;
+    return true;
+  }
+
+  ES.brouillon = { remplacerAvecAccord: remplacerAvecAccord, ETAPES: ETAPES, LOGEMENTS_MAX: LOGEMENTS_MAX, nouveau: nouveau, charger: charger, sauver: sauver,
     effacer: effacer, etapeFaite: etapeFaite, accessible: accessible, ceQuiManque: ceQuiManque };
 })(window);

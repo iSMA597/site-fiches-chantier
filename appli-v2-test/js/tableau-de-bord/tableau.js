@@ -57,7 +57,7 @@
       coulage = '<b class="' + (j <= 2 ? 'txt-ko' : 'txt-navy') + '">' + o.frDate(c.prochain_coulage) + ' (J-' + j + ')</b>';
     }
     return '<button class="ch-card" data-a="tdb-chantier" data-v="' + c.chantier_id + '"><div class="ch-card__t"><span>' + h(c.chantier) + '</span><span>' + pct + ' %</span></div>' +
-      '<div class="bar" aria-label="' + pct + ' % validés">' + barre + '</div>' +
+      '<div class="bar" role="img" aria-label="' + pct + ' % validés, ' + c.a_valider + ' à valider, ' + c.anomalies + ' en anomalie, ' + c.en_cours + ' en cours">' + barre + '</div>' +
       '<div class="ch-card__m"><span>Prochain coulage : ' + coulage + '</span>' +
       (c.fiches_anomalie ? '<span class="pill p-ko">⚠ ' + o.pluriel(c.fiches_anomalie, 'anomalie') + '</span>' : '') +
       (c.a_controler ? '<span class="pill p-envoyee">' + c.a_controler + ' à contrôler</span>' : '') +
