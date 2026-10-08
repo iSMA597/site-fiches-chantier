@@ -41,6 +41,8 @@
     'rappel-coulage': function () { return ES.programmation.feuilleCoulage(); },
     logement: function () { return ES.tableau.feuilleLogement(); },
     'chantier-infos': function () { return ES.registre.feuilleInfos(); },
+    'chantier-supprimer': function () { return ES.registre.feuilleSupprimer(); },
+    'retirer-fiche': function () { return ES.reception.feuilleRetirer(); },
     'plan-ajout': function () { return ES.registre.feuillePlan(); },
     code: function () { return ES.personnes.feuilleCode(); },
     'personne-ajout': function () { return ES.personnes.feuilleAjout(); },
@@ -220,6 +222,8 @@
       ES.etat.feuille[ev.target.dataset.saisieFeuille] = ev.target.value;
       var bouton = document.querySelector('[data-a="renvoyer-ok"]');      // sans réafficher : le curseur reste en place
       if (bouton) bouton.disabled = !(ES.etat.feuille.points.length || ev.target.value.trim());
+      var retirer = document.querySelector('[data-a="retirer-ok"]');
+      if (retirer) retirer.disabled = ev.target.value.trim().length < 3;
     }
   });
   // dates choisies dans le calendrier du téléphone

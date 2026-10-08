@@ -27,6 +27,7 @@
         var r = await Promise.all([root.Cloud.personnes(), root.Cloud.personnel()]);
         ES.etat.reg.personnes = r[0];
         ES.etat.reg.sansCompte = r[1].filter(function (x) { return !x.profile_id && x.actif; });
+        ES.etat.reg.retires = r[1].filter(function (x) { return !x.profile_id && !x.actif; });
       } else {
         ES.etat.reg.personnes = null;
         ES.etat.reg.sansCompte = (await root.Cloud.personnel()).filter(function (x) { return x.actif; });
@@ -45,18 +46,33 @@
       }).join('') + '</div>';
     }
     out += '<div class="info">Pas d\'inscription libre : le bureau crée chaque personne et lui remet un <b>code à 6 chiffres</b> (48 h, une seule fois). L\'employé choisit lui-même son mot de passe.</div>';
-    out += '<div class="list">' + (ES.etat.reg.personnes || []).map(function (p) {
+    var comptes = ES.etat.reg.personnes || [];
+    var ligneCompte = function (p) {
       return '<button class="person person--btn" data-a="personne" data-v="' + p.id + '"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span>' +
         '<div><strong>' + h(p.nom) + '</strong><br>' + h(libelleProfil(p)) + '<br><span class="muted">Identifiant : ' + h(p.identifiant) + ' · ' + (ETATS[p.etat_compte] || '') + '</span></div>' +
         '<span class="chev" aria-hidden="true">›</span></button>';
-    }).join('') + '</div>';
+    };
+    out += '<div class="list">' + comptes.filter(function (p) { return p.actif; }).map(ligneCompte).join('') + '</div>';
+    var desactives = comptes.filter(function (p) { return !p.actif; });
+    if (desactives.length) {
+      out += '<details class="replie"><summary>Comptes désactivés (' + desactives.length + ')</summary><div class="list">' + desactives.map(ligneCompte).join('') + '</div></details>';
+    }
     var sans = ES.etat.reg.sansCompte || [];
     if (sans.length) {
       out += '<h3>Sur les fiches, sans compte (' + sans.length + ')</h3><div class="list">' + sans.map(function (p) {
         return '<div class="person"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span><div><strong>' + h(p.nom) + '</strong><br>' +
           '<span class="muted">' + h(FONCTIONS[p.fonction] || p.fonction) + '</span></div>' +
-          '<button class="btn btn--sm btn--ghost" data-a="personne-compte" data-v="' + h(p.nom) + '|' + p.fonction + '">Créer son compte</button></div>';
+          '<span class="person__btns"><button class="btn btn--sm btn--ghost" data-a="personne-compte" data-v="' + h(p.nom) + '|' + p.fonction + '">Créer son compte</button>' +
+          '<button class="btn btn--sm btn--ghost" data-a="personnel-retirer" data-v="' + p.id + '" aria-label="Retirer ' + h(p.nom) + ' de la liste">Retirer</button></span></div>';
       }).join('') + '</div>';
+    }
+    var retires = ES.etat.reg.retires || [];
+    if (retires.length) {
+      out += '<details class="replie"><summary>Retirés de la liste (' + retires.length + ')</summary><div class="list">' + retires.map(function (p) {
+        return '<div class="person"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span><div><strong>' + h(p.nom) + '</strong><br>' +
+          '<span class="muted">' + h(FONCTIONS[p.fonction] || p.fonction) + ' · reste sur les anciennes fiches</span></div>' +
+          '<button class="btn btn--sm btn--ghost" data-a="personnel-retablir" data-v="' + p.id + '">Rétablir</button></div>';
+      }).join('') + '</div></details>';
     }
     out += '<button class="btn btn--ghost btn--block foot__row--marge" data-a="alobees-membres">⇩ Importer des personnes depuis Alobees</button>' +
       '<button class="btn btn--primary btn--block foot__row--marge" data-a="personne-ajout">＋ Ajouter une personne</button>';
@@ -142,6 +158,21 @@
       try { await root.navigator.share({ text: messageInvitation(ES.etat.feuille) }); } catch (e) { /* partage annulé */ }
     },
     'personne-ajout': function () { ES.etat.feuille = { type: 'personne-ajout', profil: 'compagnon' }; },
+    // personne sans compte ajoutée en trop : retirée des choix d'équipe, son nom reste sur les anciennes fiches
+    'personnel-retirer': async function (v) {
+      var p = (ES.etat.reg.sansCompte || []).filter(function (x) { return x.id === v; })[0];
+      if (!p || !root.confirm('Retirer ' + p.nom + ' de la liste ? Son nom reste sur les anciennes fiches ; « Rétablir » le fait revenir.')) return;
+      await root.Cloud.retirerPersonnel(v, false);
+      o.toast(p.nom + ' retiré(e) de la liste');
+      await charger();
+      await ES.app.rafraichirRegistreFiches();
+    },
+    'personnel-retablir': async function (v) {
+      await root.Cloud.retirerPersonnel(v, true);
+      o.toast('Remis dans la liste');
+      await charger();
+      await ES.app.rafraichirRegistreFiches();
+    },
     'personne-profil': function (v) {
       var champ = document.querySelector('[data-formulaire="personne-ajout"] [name="nom"]');
       ES.etat.feuille.nom = champ ? champ.value : ES.etat.feuille.nom;     // le nom tapé n'est pas perdu

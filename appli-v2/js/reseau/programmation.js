@@ -12,6 +12,11 @@
     var jour = o.aujourdhui();
     return (ES.etat.programmations || []).filter(function (x) { return x.date_prevue >= jour; });
   }
+  // patron ; conducteur du chantier ; chef de chantier : seulement celles qu'il a programmées (la base vérifie aussi)
+  function peutGerer(x) {
+    var p = ES.etat.profil, c = ES.assistant.chantier(x.chantier_id) || {};
+    return p.role === 'admin' || (p.role === 'conducteur' && c.conducteur_id === ES.etat.monId) || (p.role === 'chef_chantier' && x.cree_par === ES.etat.monId);
+  }
   function carte(x) {
     var c = ES.assistant.chantier(x.chantier_id) || { nom: '' };
     var demain = x.date_prevue === o.isoJour(o.dansJours(1));
@@ -19,7 +24,9 @@
       '<div class="muted">' + h(ES.assistant.lieu(x)) + ' · coulage ' + (x.coulage ? o.frDate(x.coulage) : 'à préciser') + '</div>' +
       '<div class="muted">Équipe : ' + h([x.chef, x.chef_equipe].concat(x.compagnons || []).filter(Boolean).join(', ')) + '</div>' +
       '<div class="prog__btns"><button class="btn btn--sm btn--ghost" data-a="rappel-materiel" data-v="' + x.id + '">🧰 Matériel à préparer</button>' +
-      (o.peutCreer(ES.etat.profil.role) ? '<button class="btn btn--sm btn--primary" data-a="demarrer" data-v="' + x.id + '">▶ Démarrer la fiche</button>' : '') + '</div></div>';
+      (o.peutCreer(ES.etat.profil.role) ? '<button class="btn btn--sm btn--primary" data-a="demarrer" data-v="' + x.id + '">▶ Démarrer la fiche</button>' : '') + '</div>' +
+      (peutGerer(x) ? '<div class="prog__btns"><button class="btn btn--sm btn--ghost" data-a="pg-modifier" data-v="' + x.id + '">✎ Modifier</button>' +
+        '<button class="btn btn--sm btn--ghost txt-ko" data-a="pg-annuler" data-v="' + x.id + '">Annuler</button></div>' : '') + '</div>';
   }
   // section de l'accueil
   function section() {
@@ -61,8 +68,8 @@
     out += champ('Compagnons', (r.compagnons || []).map(function (n) { return puce('pg-compagnon', n, f.compagnons.indexOf(n) >= 0, n); }).join(''));
     var complet = f.chantier_id && f.batiment_id && f.niveau_id && f.logements.length && f.date_prevue && f.compagnons.length;
     out += (complet ? '' : '<p class="foot__hint">Complétez le chantier, l\'emplacement, la date et au moins 1 compagnon</p>') +
-      '<button class="btn btn--primary btn--big" data-a="pg-enregistrer"' + (complet ? '' : ' disabled') + '>📅 Programmer</button>';
-    return { haut: '<div class="top"><button class="top__back" data-a="accueil" aria-label="Retour">‹</button><div class="top__t"><strong>Programmer</strong><span>Une incorporation à venir</span></div></div>',
+      '<button class="btn btn--primary btn--big" data-a="pg-enregistrer"' + (complet ? '' : ' disabled') + '>' + (f.id ? '✓ Enregistrer les modifications' : '📅 Programmer') + '</button>';
+    return { haut: '<div class="top"><button class="top__back" data-a="accueil" aria-label="Retour">‹</button><div class="top__t"><strong>' + (f.id ? 'Modifier' : 'Programmer') + '</strong><span>Une incorporation à venir</span></div></div>',
       contenu: out, bas: '' };
   }
 
@@ -166,11 +173,25 @@
     'pg-compagnon': function (v) { var f = ES.etat.programmation; f.compagnons = basculer(f.compagnons, v); },
     'pg-enregistrer': async function () {
       try {
-        await root.Cloud.programmer(ES.etat.programmation);
-        o.toast('Incorporation programmée');
+        if (ES.etat.programmation.id) await root.Cloud.modifierProgrammation(ES.etat.programmation);
+        else await root.Cloud.programmer(ES.etat.programmation);
+        o.toast(ES.etat.programmation.id ? 'Programmation modifiée' : 'Incorporation programmée');
         ES.etat.ecran = { n: 'accueil' };
         await ES.app.rafraichirListe();
       } catch (e) { o.toast(e.message); }
+    },
+    'pg-modifier': function (v) {
+      var x = (ES.etat.programmations || []).filter(function (p) { return p.id === v; })[0];
+      if (!x) return;
+      ES.etat.programmation = Object.assign({}, x, { logements: x.logements.slice(), compagnons: (x.compagnons || []).slice() });
+      ES.etat.ecran = { n: 'programmer' };
+    },
+    'pg-annuler': async function (v) {
+      var x = (ES.etat.programmations || []).filter(function (p) { return p.id === v; })[0];
+      if (!x || !root.confirm('Annuler l\'incorporation prévue le ' + o.frDate(x.date_prevue) + ' ? L\'équipe ne recevra plus le rappel.')) return;
+      await root.Cloud.annulerProgrammation(v);
+      o.toast('Programmation annulée');
+      await ES.app.rafraichirListe();
     },
     'demarrer': async function (v) {
       if (!(await ES.brouillon.remplacerAvecAccord())) return;

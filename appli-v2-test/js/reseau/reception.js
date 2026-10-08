@@ -81,6 +81,7 @@
     } else if (aControler(f) && p.role === 'chef_chantier') {
       actions = '<div class="info">Consultation seule : la validation est faite par le conducteur de travaux.</div>';
     }
+    if (peutRetirer(f)) actions += '<button class="btn btn--ghost btn--block txt-ko" data-a="fiche-retirer">🗑 Retirer la fiche</button>';
     if (actions) out += '<div class="actions">' + actions + '</div>';
     return { haut: haut(c.nom), contenu: out, bas: '' };
   }
@@ -93,6 +94,22 @@
     if (d && d.alobees_doc_id) return '<p class="muted centre">📁 Excel déposé dans Alobees › ' + DOSSIER_ALOBEES + ' le ' + o.frDate((d.depose_le || '').slice(0, 10)) + '</p>';
     return '<button class="btn btn--ghost btn--block" data-a="depot-alobees">📁 Déposer l\'Excel dans Alobees</button>' +
       (d && d.erreur ? '<p class="muted centre">Alobees n\'a pas répondu au dernier essai : nouvel essai automatique cette nuit.</p>' : '');
+  }
+
+  // retirer une fiche envoyée par erreur : l'auteur, le conducteur du chantier ou le patron, tant qu'elle n'est pas validée
+  function peutRetirer(f) {
+    if (f.etat === 'validee' || f.etat === 'remplacee') return false;
+    var p = ES.etat.profil, c = ES.assistant.chantier(f.chantier_id) || {};
+    return f.created_by === ES.etat.monId || p.role === 'admin' || (p.role === 'conducteur' && c.conducteur_id === ES.etat.monId);
+  }
+  function feuilleRetirer() {
+    var f = ES.etat.ficheOuverte;
+    return '<div class="sheet__h"><strong>Retirer cette fiche ?</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
+      '<p>La fiche <b>' + h(ES.assistant.lieu(f)) + '</b> est supprimée. Le patron, le conducteur et l\'auteur sont prévenus avec le motif ; la trace du retrait est gardée.</p>' +
+      '<h5>Motif <small class="muted">obligatoire</small></h5>' +
+      '<textarea rows="2" maxlength="500" data-saisie-feuille="motif" aria-label="Motif du retrait" placeholder="Ex. fiche en double, mauvais niveau">' + h(ES.etat.feuille.motif || '') + '</textarea>' +
+      '<div class="foot__row foot__row--marge"><button class="btn btn--ghost" data-a="fermer-feuille">Annuler</button>' +
+      '<button class="btn btn--ko" data-a="retirer-ok"' + ((ES.etat.feuille.motif || '').trim().length >= 3 ? '' : ' disabled') + '>🗑 Retirer</button></div>';
   }
 
   // ------------------------------------------------------------ feuilles : valider (signée) et renvoyer
@@ -223,6 +240,16 @@
       try { await preparerExcel(f); await deposerDansAlobees(f); }
       catch (e) { o.toast('Excel pas déposé dans Alobees : ' + e.message); f.depotAlobees = await root.Cloud.depotAlobees(f.id); }
     },
+    'fiche-retirer': function () { ES.etat.feuille = { type: 'retirer-fiche', motif: '' }; },
+    'retirer-ok': async function () {
+      var motif = (ES.etat.feuille.motif || '').trim(), id = ES.etat.ficheOuverte.id;
+      ES.etat.feuille = null;
+      await root.Cloud.retirerFiche(id, motif);
+      o.toast('Fiche retirée');
+      ES.etat.ficheOuverte = null;
+      ES.etat.ecran = { n: 'accueil' };
+      await ES.app.rafraichirListe();
+    },
     'renvoyer': function () {
       var f = ES.etat.ficheOuverte;
       var anomalies = Object.keys(f.items).filter(function (id) { return f.items[id] === 'KO'; });
@@ -250,6 +277,6 @@
     }
   };
 
-  ES.reception = { vueFiche: vueFiche, feuilleValider: feuilleValider, feuilleRenvoyer: feuilleRenvoyer, apresAffichage: apresAffichage,
+  ES.reception = { vueFiche: vueFiche, feuilleValider: feuilleValider, feuilleRenvoyer: feuilleRenvoyer, feuilleRetirer: feuilleRetirer, apresAffichage: apresAffichage,
     ACTIONS: ACTIONS, statut: statut, aControler: aControler, peutValider: peutValider };
 })(window);

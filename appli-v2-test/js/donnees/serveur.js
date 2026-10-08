@@ -382,6 +382,26 @@
   }
   // conditions d'utilisation : texte, état, acceptation signée (fonction serveur « conditions »)
   function conditions(action, corps) { return appelerFonction('conditions', Object.assign({ action: action }, corps || {})); }
+  // ------------------------------------------------------------ suppressions (08/10) : ce qui n'a jamais servi se supprime,
+  // le reste s'archive ou se retire ; les droits sont vérifiés par la base (migration 17)
+  async function supprimerChantier(id, nePlusProposer) {
+    var r = verifier(await sb.rpc('supprimer_chantier', { cid: id, ne_plus_proposer: !!nePlusProposer }));
+    if (r && r.plans && r.plans.length) { try { await sb.storage.from('plans').remove(r.plans); } catch (e) { /* fichiers orphelins sans gravité */ } }
+    return r;
+  }
+  async function archiverChantier(id, actif) { return verifier(await sb.from('chantiers').update({ actif: actif }).eq('id', id).select('id').single()); }
+  async function retirerPersonnel(id, actif) { return verifier(await sb.from('personnel').update({ actif: actif }).eq('id', id).select('id').single()); }
+  async function modifierProgrammation(p) {
+    var champs = { chantier_id: p.chantier_id, batiment_id: p.batiment_id, niveau_id: p.niveau_id, logements: p.logements, date_prevue: p.date_prevue,
+      coulage: p.coulage || null, chef: p.chef || null, chef_equipe: p.chef_equipe || null, compagnons: p.compagnons };
+    var r = verifier(await sb.from('programmations').update(champs).eq('id', p.id).select('id'));
+    if (!r.length) throw new Error('Modification impossible : une fiche a déjà été envoyée pour ces logements, ou ce n\'est pas votre programmation.');
+  }
+  async function annulerProgrammation(id) { verifier(await sb.rpc('annuler_programmation', { pid: id })); }
+  async function retirerFiche(id, motif) {
+    verifier(await sb.rpc('retirer_fiche', { fid: id, motif: motif }));
+    appelerFonction('notifier', { fiche_id: id, evenement: 'retiree' }).catch(function () { return null; });   // patron, conducteur, auteur
+  }
   // lien de lecture (5 minutes) vers son propre PDF signé, le plus récent
   async function monPdfConditions() {
     var a = verifier(await sb.from('cgu_acceptations').select('chemin_pdf').eq('profile_id', await monId()).order('accepte_le', { ascending: false }).limit(1));
@@ -553,7 +573,9 @@
     marquerVue: marquerVue, mesVues: mesVues, validerFiche: validerFiche, renvoyerACorriger: renvoyerACorriger,
     memoire: memoire, programmations: programmations, programmer: programmer,
     preparerExcel: preparerExcel, envoyerExcel: envoyerExcel, deposerExcelAlobees: deposerExcelAlobees, depotAlobees: depotAlobees,
-    conditions: conditions, monPdfConditions: monPdfConditions, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
+    conditions: conditions, monPdfConditions: monPdfConditions,
+    supprimerChantier: supprimerChantier, archiverChantier: archiverChantier, retirerPersonnel: retirerPersonnel,
+    modifierProgrammation: modifierProgrammation, annulerProgrammation: annulerProgrammation, retirerFiche: retirerFiche, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
     activationCompte: activationCompte, connexionPasskey: connexionPasskey, enregistrerPasskey: enregistrerPasskey,
     personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte,
     alobees: alobees, plansPerimes: plansPerimes,

@@ -344,3 +344,8 @@ input, textarea, select, .inp { font-size: 16px; }
 .etapes-install .foot__row { margin-top: 8px; }
 .etapes-install .ico { width: 22px; height: 22px; vertical-align: middle; color: #0A84FF; }
 .code-inline { font-size: 20px; letter-spacing: 2px; }
+
+/* sections repliées (comptes désactivés, personnes retirées) et boutons d'une ligne de personne */
+.replie { margin: 14px 0; }
+.replie summary { cursor: pointer; font-weight: 700; color: var(--navy); min-height: 44px; display: flex; align-items: center; }
+.person__btns { display: flex; flex-direction: column; gap: 6px; margin-left: auto; }

@@ -139,7 +139,37 @@
       out += '<h3>Importer la structure</h3><p class="lead">Depuis la liste des lots, un descriptif ou un tableau du client. L\'appli fait une proposition, vous vérifiez, puis vous enregistrez.</p>' +
         '<label class="btn btn--ghost btn--block">📊 Excel / CSV / 📄 PDF<input type="file" accept=".xlsx,.csv,.pdf,application/pdf" data-saisie="import-structure" class="vh"></label>';
     }
+    out += blocFinChantier(c);
     return { haut: haut('Registre', c.nom, 'reg-retour'), contenu: out, bas: ES.onglets.barre('reg') };
+  }
+  // archiver / réactiver : patron ou conducteur du chantier ; supprimer : patron, chantier sans aucune fiche
+  function blocFinChantier(c) {
+    if (!peutModifier(c)) return '';
+    var out = '<h3>Fin du chantier</h3><div class="card">';
+    out += c.actif === false
+      ? '<p class="muted">Chantier archivé : il n\'apparaît plus pour les fiches. L\'historique (fiches, plans) est gardé.</p>' +
+        '<button class="btn btn--ok btn--block" data-a="chantier-reactiver">↺ Réactiver le chantier</button>'
+      : '<p class="muted">Archiver : le chantier disparaît des listes pour les fiches ; l\'historique (fiches, plans) est gardé.</p>' +
+        '<button class="btn btn--ghost btn--block" data-a="chantier-archiver">🗄 Archiver le chantier</button>';
+    if (patron()) {
+      out += '<p class="muted foot__row--marge">Supprimer : seulement un chantier ajouté par erreur, qui n\'a aucune fiche.</p>' +
+        '<button class="btn btn--ko btn--block" data-a="chantier-supprimer">🗑 Supprimer le chantier</button>';
+    }
+    return out + '</div>';
+  }
+  function feuilleSupprimer() {
+    var f = ES.etat.feuille, c = chantierOuvert() || {};
+    return '<div class="sheet__h"><strong>Supprimer « ' + h(c.nom || '') + ' » ?</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
+      '<p>Le chantier, ses bâtiments, niveaux, plans et programmations sont <b>supprimés définitivement</b>. ' +
+      'Impossible s\'il a déjà des fiches : archivez-le plutôt.</p>' +
+      (c.alobees_id ? '<label class="check check--petit"><input type="checkbox" data-a="chantier-supprimer-alobees"' + (f.nePlusProposer ? ' checked' : '') + '>' +
+        '<span>Ne plus le proposer depuis Alobees<small>Il restera dans Alobees ; « Rétablir » dans « Nouveaux chantiers » le fait revenir.</small></span></label>' : '') +
+      '<div class="foot__row foot__row--marge"><button class="btn btn--ghost" data-a="fermer-feuille">Annuler</button>' +
+      '<button class="btn btn--ko" data-a="chantier-supprimer-ok">🗑 Supprimer</button></div>';
+  }
+  async function apresChangementChantier() {
+    await charger();
+    await ES.app.rafraichirRegistreFiches();
   }
 
   // ------------------------------------------------------------ enregistrement de la structure (fonction existante sauverChantier)
@@ -226,6 +256,28 @@
       try { await chargerPlans(v); } catch (e) { o.toast(e.message); }
     },
     'chantier-nouveau': function () { ES.etat.feuille = { type: 'chantier-infos' }; },
+    'chantier-archiver': async function () {
+      var c = chantierOuvert();
+      if (!root.confirm('Archiver « ' + c.nom + ' » ? Il ne sera plus proposé pour les fiches ; l\'historique est gardé.')) return;
+      await root.Cloud.archiverChantier(c.id, false);
+      o.toast('Chantier archivé');
+      await apresChangementChantier();
+    },
+    'chantier-reactiver': async function () {
+      await root.Cloud.archiverChantier(chantierOuvert().id, true);
+      o.toast('Chantier réactivé');
+      await apresChangementChantier();
+    },
+    'chantier-supprimer': function () { ES.etat.feuille = { type: 'chantier-supprimer', nePlusProposer: true }; },
+    'chantier-supprimer-alobees': function (v, ev) { ES.etat.feuille.nePlusProposer = ev.target.checked; },
+    'chantier-supprimer-ok': async function () {
+      var c = chantierOuvert(), nePlus = ES.etat.feuille.nePlusProposer;
+      ES.etat.feuille = null;
+      await root.Cloud.supprimerChantier(c.id, nePlus);
+      o.toast('« ' + c.nom + ' » supprimé');
+      ES.etat.ecran = { n: 'reg' };
+      await apresChangementChantier();
+    },
     'chantier-modifier': function () { ES.etat.feuille = { type: 'chantier-infos', id: ES.etat.ecran.id }; },
     'reg-nb': function (v) {
       var m = v.split('|'), c = chantierOuvert();
@@ -261,7 +313,7 @@
     }
   };
 
-  ES.registre = { ouvrir: ouvrir, charger: charger, vue: vue, vueChantier: vueChantier, feuilleInfos: feuilleInfos, feuillePlan: feuillePlan,
+  ES.registre = { ouvrir: ouvrir, charger: charger, vue: vue, vueChantier: vueChantier, feuilleInfos: feuilleInfos, feuilleSupprimer: feuilleSupprimer, feuillePlan: feuillePlan,
     chantierOuvert: chantierOuvert, batimentsTries: batimentsTries, structureDe: structureDe, enregistrer: enregistrer,
     chargerPlans: chargerPlans, FORMULAIRES: FORMULAIRES, ACTIONS: ACTIONS };
 })(window);
