@@ -20,6 +20,10 @@
       case 'programmer': return ES.programmation.vueProgrammer();
       case 'tdb': return ES.tableau.vue();
       case 'tdb-chantier': return ES.tableau.vueChantier();
+      case 'reg': return ES.registre.vue();
+      case 'reg-chantier': return ES.registre.vueChantier();
+      case 'alobees': return ES.alobees.vue();
+      case 'import-structure': return ES.importStructure.vue();
       case 'accueil': return ES.accueil.vue();
       default: return { haut: '', contenu: '<p class="empty">Chargement…</p>', bas: '' };
     }
@@ -30,7 +34,8 @@
     var corps = { guide: function () { return ES.assistant.feuilleGuide(f.etape); }, compte: ES.accueil.feuilleCompte,
       valider: ES.reception.feuilleValider, renvoyer: ES.reception.feuilleRenvoyer,
       'rappel-materiel': ES.programmation.feuilleMateriel, 'rappel-coulage': ES.programmation.feuilleCoulage,
-      logement: ES.tableau.feuilleLogement }[f.type]();
+      logement: ES.tableau.feuilleLogement, 'chantier-infos': ES.registre.feuilleInfos, 'plan-ajout': ES.registre.feuillePlan,
+      code: ES.personnes.feuilleCode, 'personne-ajout': ES.personnes.feuilleAjout, personne: ES.personnes.feuillePersonne }[f.type]();
     return '<div class="scrim" data-a="fermer-feuille"><div class="sheet" role="dialog" aria-modal="true" data-interieur>' + corps + '</div></div>';
   }
   function cleEcran() { var e = ES.etat.ecran; return e.n + '|' + (e.id || '') + '|' + (ES.etat.brouillon ? ES.etat.brouillon.etape : ''); }
@@ -49,6 +54,11 @@
   }
 
   // ------------------------------------------------------------ données
+  // structure des chantiers utilisée par la fiche (après une modification dans le Registre)
+  async function rafraichirRegistreFiches() {
+    try { ES.etat.registre = (await root.Cloud.registre()).cfg; } catch (e) { /* hors réseau */ }
+    try { ES.etat.plansPerimes = await root.Cloud.plansPerimes(); } catch (e) { ES.etat.plansPerimes = []; }
+  }
   async function rafraichirListe() {
     ES.etat.outbox = await root.Cloud.outbox();
     try {
@@ -64,7 +74,7 @@
   }
   async function chargerSession() {
     ES.etat.profil = await root.Cloud.profil();
-    ES.etat.registre = (await root.Cloud.registre()).cfg;
+    await rafraichirRegistreFiches();
     ES.etat.monId = await root.Cloud.monId();
     ES.etat.brouillon = o.peutCreer(ES.etat.profil.role) ? ES.brouillon.charger() : null;
     ES.etat.photos = ES.etat.brouillon ? await ES.photos.liste(ES.etat.brouillon.id) : [];
@@ -80,6 +90,7 @@
     if (!q.toString()) return;
     root.history.replaceState(null, '', location.pathname);
     if (q.get('fiche')) await ES.reception.ACTIONS.ouvrir(q.get('fiche'));
+    else if (q.get('registre') && ES.onglets.zones().indexOf('reg') >= 0) { await ES.registre.ouvrir(); await ES.registre.ACTIONS['reg-chantier'](q.get('registre')); }
     else if (q.get('rappel') === 'incorporation') ES.etat.feuille = { type: 'rappel-materiel', id: q.get('id') };
     else if (q.get('rappel') === 'coulage') ES.etat.feuille = { type: 'rappel-coulage', chantier: q.get('chantier'), jour: q.get('jour') };
     if (ES.etat.feuille) await ES.programmation.preparerFeuille(ES.etat.feuille);
@@ -91,8 +102,10 @@
     'rien': function () { /* puce d'information */ }
   };
   function trouverAction(nom) {
+    if (ES.etat.ecran.n === 'connexion') return actionsCommunes[nom] || ES.connexion.ACTIONS[nom];
     return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
-      ES.onglets.ACTIONS[nom] || ES.tableau.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||
+      ES.onglets.ACTIONS[nom] || ES.tableau.ACTIONS[nom] || ES.registre.ACTIONS[nom] || ES.personnes.ACTIONS[nom] ||
+      ES.alobees.ACTIONS[nom] || ES.importStructure.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||
       (ES.etat.ecran.n === 'assistant' && ES.assistant.ACTIONS[nom]);
   }
   document.addEventListener('click', async function (ev) {
@@ -106,7 +119,7 @@
     afficher();
   });
   document.addEventListener('input', function (ev) {
-    if (ev.target.dataset && ev.target.dataset.saisie && ev.target.type !== 'file') ES.assistant.saisie(ev.target);
+    if (ev.target.dataset && ev.target.dataset.saisie && ev.target.type !== 'file' && ES.etat.ecran.n === 'assistant') ES.assistant.saisie(ev.target);
     if (ev.target.dataset && ev.target.dataset.saisieFeuille && ES.etat.feuille) {
       ES.etat.feuille[ev.target.dataset.saisieFeuille] = ev.target.value;
       var bouton = document.querySelector('[data-a="renvoyer-ok"]');      // sans réafficher : le curseur reste en place
@@ -114,12 +127,17 @@
     }
   });
   document.addEventListener('change', async function (ev) {
-    if (ev.target.dataset && ev.target.dataset.saisie === 'photo') { await ES.assistant.photosChoisies(ev.target); afficher(); }
+    var saisie = ev.target.dataset && ev.target.dataset.saisie;
+    if (saisie === 'photo') { await ES.assistant.photosChoisies(ev.target); afficher(); }
+    else if (saisie === 'import-structure') { await ES.importStructure.fichierChoisi(ev.target); afficher(); }
+    else if (saisie === 'alobees-niveau') ES.alobees.saisie(ev.target);
   });
   document.addEventListener('submit', async function (ev) {
-    if (ev.target.dataset.formulaire !== 'connexion') return;
+    var nom = ev.target.dataset && ev.target.dataset.formulaire;
+    if (!nom) return;
     ev.preventDefault();
-    await ES.connexion.seConnecter();
+    if (ES.registre && ES.registre.FORMULAIRES[nom]) await ES.registre.FORMULAIRES[nom](ev.target);
+    else await ES.connexion.soumettre(nom);
     afficher();
   });
   document.addEventListener('keydown', function (ev) {
@@ -136,7 +154,11 @@
       await ES.gabarit.charger();
       if (!root.Cloud.actif) throw new Error('Serveur non configuré (js/config.js).');
       var etat = await root.Cloud.etatSession();
-      if (etat === 'absente') ES.etat.ecran = { n: 'connexion' };
+      if (etat === 'absente') {
+        ES.etat.ecran = { n: 'connexion' };
+        var code = new URLSearchParams(location.search).get('code');          // QR code d'activation scanné
+        if (/^\d{6}$/.test(code || '')) { ES.etat.etapeConnexion = 'code'; ES.etat.codePrerempli = code; root.history.replaceState(null, '', location.pathname); }
+      }
       else await chargerSession();
     } catch (e) {
       ES.etat.ecran = { n: 'connexion' };
@@ -146,6 +168,7 @@
     setInterval(function () { if (navigator.onLine) synchroniser(); }, 60000);   // filet de sécurité : envoi toutes les minutes
   }
 
-  ES.app = { afficher: afficher, synchroniser: synchroniser, rafraichirListe: rafraichirListe, chargerSession: chargerSession };
+  ES.app = { afficher: afficher, synchroniser: synchroniser, rafraichirListe: rafraichirListe, chargerSession: chargerSession,
+    rafraichirRegistreFiches: rafraichirRegistreFiches };
   demarrer();
 })(window);

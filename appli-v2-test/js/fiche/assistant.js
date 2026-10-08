@@ -101,7 +101,10 @@
       }).join(''), o.pluriel(b.logements.length, 'choisi') + ' · 6 max');
       if (nv.logements <= ES.brouillon.LOGEMENTS_MAX) out += '<button class="link" data-a="tout-le-niveau">Tout le niveau (' + nv.logements + ')</button>';
       var plan = (c.plans || []).filter(function (p) { return p.niveau_id === nv.id; })[0];
-      if (plan) out += '<div><button class="link" data-a="voir-plan" data-v="' + plan.id + '">🗺 Voir le plan de ce niveau</button></div>';
+      var perime = (ES.etat.plansPerimes || []).filter(function (x) { return x.niveau_id === nv.id; })[0];
+      if (perime) out += '<div class="alert">⚠ Nouvel indice ' + h(perime.indice_dispo) + ' dans Alobees (plan de l\'appli : indice ' + h(perime.indice_actuel) + '). ' +
+        'Ne travaillez pas sur l\'ancien indice : prévenez le conducteur.</div>';
+      if (plan) out += '<div><button class="link" data-a="voir-plan" data-v="' + plan.id + '">🗺 Voir le plan de ce niveau' + (plan.indice ? ' (indice ' + h(plan.indice) + ')' : '') + '</button></div>';
     } else {
       out += champ('Logements', '<span class="muted">Choisissez d\'abord le niveau</span>');
     }
@@ -212,10 +215,15 @@
       chantier_id: b.chantier_id, batiment_id: b.batiment_id, niveau_id: b.niveau_id, logements: b.logements,
       date: b.date, coulage: b.coulage, chef: b.chef, chef_equipe: b.chef_equipe, compagnons: b.compagnons,
       controleur: ES.etat.profil.nom, observations: b.observations, items: items, notes: notes, libres: {},
-      plan_indice: b.plan_indice, signature: b.signature, signatureRatio: b.signatureRatio, excel_demande: !!b.excel_demande,
+      plan_indice: indicePlan(c, b.niveau_id) || b.plan_indice, signature: b.signature, signatureRatio: b.signatureRatio, excel_demande: !!b.excel_demande,
       // noms lisibles pour l'Excel (identique à la fiche papier)
       chantier: c.nom, batiment: bt.nom, niveau: o.nivL(nv.num)
     };
+  }
+  // indice du plan du niveau dans le registre : c'est le plan utilisé pour la fiche (décision 22)
+  function indicePlan(c, niveauId) {
+    var plan = c && (c.plans || []).filter(function (p) { return p.niveau_id === niveauId; })[0];
+    return plan ? plan.indice : null;
   }
   // une fiche du serveur, mise au format de l'Excel (noms lisibles, comme la fiche papier)
   function ficheExcelDepuisServeur(f) {
@@ -345,5 +353,5 @@
 
   ES.assistant = { vue: vue, ACTIONS: ACTIONS, saisie: saisie, photosChoisies: photosChoisies, apresAffichage: apresAffichage,
     feuilleGuide: feuilleGuide, lieu: lieu, chantier: chantier, telechargerExcel: telechargerExcel, chargerMemoire: chargerMemoire,
-    genererExcel: genererExcel, ficheExcelDepuisServeur: ficheExcelDepuisServeur };
+    genererExcel: genererExcel, ficheExcelDepuisServeur: ficheExcelDepuisServeur, indicePlan: indicePlan };
 })(window);

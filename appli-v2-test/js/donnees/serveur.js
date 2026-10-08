@@ -126,7 +126,7 @@
     try {
       if (!(await session())) throw Object.assign(new Error('hors ligne'), { reseau: true });
       var ch = verifier(await sb.from('chantiers')
-        .select('id,nom,adresse,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),plans(id,niveau_id,titre,chemin)')
+        .select('id,nom,adresse,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),plans(id,niveau_id,titre,chemin,indice)')
         .eq('actif', true).order('nom'));
       // nom du conducteur de chaque chantier (affiché dans « La fiche sera envoyée à »)
       var idsConducteurs = ch.map(function (c) { return c.conducteur_id; }).filter(Boolean);
@@ -142,7 +142,7 @@
         chantiers: ch.map(function (c) {
           return {
             id: c.id, nom: c.nom, adresse: c.adresse || '', conducteur: conducteurs[c.conducteur_id] || '', conducteur_id: c.conducteur_id || null,
-            plans: (c.plans || []).map(function (p) { return { id: p.id, niveau_id: p.niveau_id, titre: p.titre, chemin: p.chemin }; }),
+            plans: (c.plans || []).map(function (p) { return { id: p.id, niveau_id: p.niveau_id, titre: p.titre, chemin: p.chemin, indice: p.indice }; }),
             batiments: (c.batiments || []).sort(parOrdre).map(function (b) {
               return {
                 id: b.id, nom: b.nom,
@@ -363,6 +363,25 @@
     var j = abonnement.toJSON();
     return verifier(await sb.rpc('abonner_push', { point_acces: j.endpoint, cle_p256dh: j.keys.p256dh, cle_auth: j.keys.auth }));
   }
+  // ------------------------------------------------------------ V2, lot E : comptes (code à 6 chiffres, Face ID), registre, Alobees
+  function activationCompte(corps) { return appelerFonction('activer-compte', corps); }
+  async function connexionPasskey() {
+    var r = await sb.auth.signInWithPasskey();
+    if (r.error) throw traduire(r.error);
+    return r.data;
+  }
+  async function enregistrerPasskey() {
+    var r = await sb.auth.registerPasskey();
+    if (r.error) throw traduire(r.error);
+    verifier(await sb.rpc('noter_passkey'));
+  }
+  async function personnes() { return verifier(await sb.from('v_personnes').select('*').order('nom')); }
+  async function creerPersonne(nom, profil) { return verifier(await sb.rpc('admin_creer_personne', { p_nom: nom, p_profil: profil })); }
+  async function nouveauCode(profileId) { return verifier(await sb.rpc('admin_nouveau_code', { pid: profileId })); }
+  async function basculerCompte(profileId, actif) { return verifier(await sb.rpc('admin_activer_compte', { pid: profileId, p_actif: actif })); }
+  function alobees(action, corps) { return appelerFonction('alobees', Object.assign({ action: action }, corps || {})); }
+  async function plansPerimes() { return verifier(await sb.from('v_plans_perimes').select('*')); }
+
   async function desabonnerCeTelephone() {
     try {
       var reg = root.navigator && root.navigator.serviceWorker && await root.navigator.serviceWorker.getRegistration();
@@ -401,7 +420,7 @@
   // ------------------------------------------------------------ chantiers (registre)
   async function chantiersDetail() {
     return verifier(await sb.from('chantiers')
-      .select('id,nom,adresse,client,debut,fin,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),affectations(profile_id)')
+      .select('id,nom,adresse,client,debut,fin,actif,conducteur_id,alobees_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),affectations(profile_id)')
       .order('nom'));
   }
   // structure : [{ bid?, batiment, num, nb }] — bid = bâtiment existant (renommage par identifiant, pas par nom)
@@ -471,13 +490,14 @@
   async function plans(chantierId) {
     return verifier(await sb.from('plans').select('*').eq('chantier_id', chantierId).order('created_at', { ascending: false }));
   }
-  async function ajouterPlan(chantierId, fichier, titre, batimentId, niveauId) {
+  async function ajouterPlan(chantierId, fichier, titre, batimentId, niveauId, indice) {
     var ext = ((fichier.name.split('.').pop() || 'pdf').toLowerCase().match(/^(pdf|png|jpe?g|webp)$/) || ['pdf'])[0];
     var chemin = chantierId + '/' + (root.crypto.randomUUID ? root.crypto.randomUUID() : Date.now()) + '.' + ext;
     var up = await sb.storage.from('plans').upload(chemin, fichier, { contentType: fichier.type || 'application/pdf' });
     if (up.error) throw traduire(up.error);
     return verifier(await sb.from('plans').insert({ chantier_id: chantierId, batiment_id: batimentId || null, niveau_id: niveauId || null,
-      titre: titre || fichier.name, chemin: chemin, type_mime: fichier.type || 'application/pdf', taille: fichier.size }).select().single());
+      titre: titre || fichier.name, chemin: chemin, type_mime: fichier.type || 'application/pdf', taille: fichier.size,
+      indice: indice || null }).select().single());
   }
   async function supprimerPlan(p) {
     verifier(await sb.from('plans').delete().eq('id', p.id));
@@ -498,6 +518,9 @@
     marquerVue: marquerVue, mesVues: mesVues, validerFiche: validerFiche, renvoyerACorriger: renvoyerACorriger,
     memoire: memoire, programmations: programmations, programmer: programmer,
     envoyerExcel: envoyerExcel, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
+    activationCompte: activationCompte, connexionPasskey: connexionPasskey, enregistrerPasskey: enregistrerPasskey,
+    personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte,
+    alobees: alobees, plansPerimes: plansPerimes,
     marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
     suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat, tdbChantiers: tdbChantiers,
     comptes: comptes, creerCompte: creerCompte, changerMotDePasse: changerMotDePasse,

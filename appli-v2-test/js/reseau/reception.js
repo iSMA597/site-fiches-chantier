@@ -46,6 +46,11 @@
       '<dt>Incorporation</dt><dd>' + o.frDate(f.date_fiche) + '</dd><dt>Coulage prévu</dt><dd>' + o.frDate(f.coulage) + '</dd>' +
       '<dt>Chef de chantier</dt><dd>' + h(f.chef) + '</dd><dt>Équipe</dt><dd>' + h([f.chef_equipe].concat(f.compagnons || []).filter(Boolean).join(', ')) + '</dd>' +
       '<dt>Rempli par</dt><dd>' + h(f.controleur) + '</dd></dl></div>';
+    var plan = (c.plans || []).filter(function (x) { return x.niveau_id === f.niveau_id; })[0];
+    if (plan) out += '<button class="btn btn--ghost btn--block" data-a="voir-plan-fiche" data-v="' + plan.id + '">🗺 Plan du niveau' + (plan.indice ? ' (indice ' + h(plan.indice) + ')' : '') + '</button>';
+    if (f.plan_indice && plan && plan.indice && f.plan_indice !== plan.indice) {
+      out += '<div class="warnbox">⚠ Fiche faite sur le plan <b>indice ' + h(f.plan_indice) + '</b> ; indice actuel : <b>' + h(plan.indice) + '</b>. Vérifiez les modifications.</div>';
+    }
     if (ES.programmation) out += ES.programmation.comparaison(f);
     if (anomalies.length) out += '<h3 class="txt-ko">Anomalies signalées</h3><div class="alert alert--liste">' + anomalies.map(function (pt) {
       return '<div><b>✗ ' + h(pt.label) + '</b>' + (notes[pt.id] ? '<br><i>« ' + h(notes[pt.id]) + ' »</i>' : '') + '</div>';
@@ -155,6 +160,11 @@
         ES.etat.ficheOuverte = await root.Cloud.fiche(v);
         ES.etat.vues = (ES.etat.vues || []).concat([v]);
       } catch (e) { o.toast(e.message); ES.etat.ecran = { n: 'accueil' }; }
+    },
+    'voir-plan-fiche': async function (v) {
+      var c = ES.assistant.chantier(ES.etat.ficheOuverte.chantier_id) || { plans: [] };
+      var plan = c.plans.filter(function (p) { return p.id === v; })[0];
+      try { root.open(await root.Cloud.urlPlan(plan), '_blank', 'noopener'); } catch (e) { o.toast('Plan indisponible sans réseau'); }
     },
     'valider': function () { ES.etat.feuille = { type: 'valider', signature: null, excel: !!ES.etat.ficheOuverte.excel_demande }; },
     'effacer-signature-validation': function () { ES.etat.feuille.signature = null; },

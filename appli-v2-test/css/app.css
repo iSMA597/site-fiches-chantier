@@ -242,3 +242,36 @@ details.sec ul { list-style: none; margin: 0; padding: 0 12px 10px; font-size: 1
   .kpis { grid-template-columns: repeat(4, 1fr); }
   .tdb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 }
+
+/* ---------------------------------------------------------------- lot E : registre, personnes, connexion (repris de la maquette) */
+.struct-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--bg); font-size: 14px; }
+.struct-row:last-child { border-bottom: 0; }
+.struct-row > span { flex: 1; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper button { width: 34px; height: 34px; border-radius: 9px; border: 2px solid var(--line); background: #fff; font: inherit; font-weight: 700; color: var(--navy); }
+.stepper b { min-width: 22px; text-align: center; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 12px; overflow: hidden; }
+.tbl th, .tbl td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.tbl th { background: var(--bg); color: var(--grey); font-size: 11px; text-transform: uppercase; }
+.tbl tr.doubt td { background: var(--yel-bg); }
+.person { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.person--btn { width: 100%; text-align: left; font: inherit; color: inherit; }
+.person .avatar { background: var(--royal); color: #fff; display: grid; place-items: center; flex: none; }
+.person > div { flex: 1; min-width: 0; font-size: 13px; }
+.person strong { color: var(--navy); font-size: 14px; }
+.pick__txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pick__sous { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+.pick--grise { opacity: .7; cursor: default; }
+.pick--col { display: flex; flex-direction: column; gap: 6px; opacity: 1; }
+.code6 { font-size: 32px; letter-spacing: 8px; font-weight: 700; color: var(--navy); text-align: center; }
+.code6--grand { font-size: 40px; margin: 8px 0; }
+input.code6 { letter-spacing: 12px; }
+.qr { width: 170px; height: 170px; margin: 6px auto; }
+.qr svg { width: 100%; height: 100%; }
+.etapes-code { font-size: 13.5px; padding-left: 20px; }
+.form-col { display: flex; flex-direction: column; gap: 10px; }
+.form-col .field__l { display: flex; flex-direction: column; gap: 4px; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.login__form { display: flex; flex-direction: column; gap: 12px; }
+.gros-picto { font-size: 54px; }
+.txt-attente { color: var(--yel); }
