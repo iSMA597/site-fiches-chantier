@@ -44,7 +44,7 @@
 
   function vue() {
     var p = ES.etat.profil, createur = o.peutCreer(p.role);
-    var out = etatReseau();
+    var out = etatReseau() + ES.notifications.aideIphone();
     var aCorriger = (ES.etat.fiches || []).filter(function (f) { return f.etat === 'a_corriger' && f.created_by === ES.etat.monId; });
     if (aCorriger.length) {
       out += '<div class="redbox"><h4>↩ ' + o.pluriel(aCorriger.length, 'fiche') + ' à corriger</h4>' + aCorriger.map(function (f) {
@@ -106,8 +106,9 @@
     var p = ES.etat.profil, attente = (ES.etat.outbox || []).filter(function (e) { return !e.recue; }).length;
     return '<div class="sheet__h"><strong>' + h(p.nom) + '</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
       '<p class="muted">' + h(o.ROLES[p.role] || p.role) + '</p>' +
+      ES.notifications.blocCompte(ES.etat.feuille.notifications || 'inactives') +
       (attente ? '<p class="alert">⚠ ' + o.pluriel(attente, 'fiche') + ' pas encore envoyée(s) : elles seront perdues si vous vous déconnectez.</p>' : '') +
-      '<button class="btn btn--ghost btn--block" data-a="deconnexion">Se déconnecter</button>';
+      '<button class="btn btn--ghost btn--block foot__row--marge" data-a="deconnexion">Se déconnecter</button>';
   }
 
   var ACTIONS = {
@@ -133,7 +134,7 @@
       o.toast('Brouillon abandonné');
     },
     'envoyer-maintenant': function () { ES.app.synchroniser(); },
-    'compte': function () { ES.etat.feuille = { type: 'compte' }; },
+    'compte': async function () { ES.etat.feuille = { type: 'compte', notifications: await ES.notifications.etat() }; },
     'deconnexion': async function () {
       await root.Cloud.deconnexion();
       ES.etat = { ecran: { n: 'connexion' }, photos: [] };

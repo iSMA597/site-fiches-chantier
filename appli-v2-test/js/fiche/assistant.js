@@ -188,6 +188,8 @@
       '<div class="field"><div class="field__l">Observations <small>facultatif</small></div><textarea rows="2" maxlength="2000" data-saisie="observations" placeholder="Une remarque pour le conducteur ?">' + h(b.observations) + '</textarea></div>' +
       '<div class="info"><b>La fiche sera envoyée à :</b><br>🏢 ' + d.bureau.map(h).join(' · ') +
       (d.equipe.length ? '<br>👷 Équipe (reçoit la fiche et le plan) : ' + d.equipe.map(h).join(' · ') : '') + '</div>' +
+      '<label class="check check--petit"><input type="checkbox" data-a="excel-demande"' + (b.excel_demande ? ' checked' : '') + '>' +
+      '<span>Envoyer l\'Excel à la facturation une fois la fiche validée<small>Le serveur l\'envoie en pièce jointe dès que le conducteur valide</small></span></label>' +
       '<div class="redbox"><h4>⚠ À LIRE AVANT D\'ENVOYER</h4><ul>' + ES.gabarit.rappels().map(function (r) { return '<li>' + h(r) + '</li>'; }).join('') + '</ul>' +
       '<label class="check"><input type="checkbox" data-a="lu"' + (b.lu ? ' checked' : '') + '> J\'ai tout lu et vérifié</label></div>' +
       '<div class="field"><div class="field__l">Signature <small>avec le doigt</small></div>' +
@@ -210,15 +212,29 @@
       chantier_id: b.chantier_id, batiment_id: b.batiment_id, niveau_id: b.niveau_id, logements: b.logements,
       date: b.date, coulage: b.coulage, chef: b.chef, chef_equipe: b.chef_equipe, compagnons: b.compagnons,
       controleur: ES.etat.profil.nom, observations: b.observations, items: items, notes: notes, libres: {},
-      plan_indice: b.plan_indice, signature: b.signature, signatureRatio: b.signatureRatio,
+      plan_indice: b.plan_indice, signature: b.signature, signatureRatio: b.signatureRatio, excel_demande: !!b.excel_demande,
       // noms lisibles pour l'Excel (identique à la fiche papier)
       chantier: c.nom, batiment: bt.nom, niveau: o.nivL(nv.num)
     };
   }
-  async function telechargerExcel(fiche) {
+  // une fiche du serveur, mise au format de l'Excel (noms lisibles, comme la fiche papier)
+  function ficheExcelDepuisServeur(f) {
+    var c = chantier(f.chantier_id), bt = batiment(c, f.batiment_id), nv = niveau(bt, f.niveau_id);
+    return {
+      id: f.id, chantier_id: f.chantier_id, batiment_id: f.batiment_id, niveau_id: f.niveau_id, logements: f.logements,
+      date: f.date_fiche, coulage: f.coulage, chef: f.chef, chef_equipe: f.chef_equipe, compagnons: f.compagnons || [],
+      controleur: f.controleur, observations: f.observations || '', items: f.items || {}, notes: f.notes || {}, libres: {},
+      plan_indice: f.plan_indice, signature: f.signature, signatureRatio: f.signature_ratio,
+      chantier: c ? c.nom : '', batiment: bt ? bt.nom : '', niveau: nv ? o.nivL(nv.num) : ''
+    };
+  }
+  async function genererExcel(fiche) {
     var contenu = await ES.gabarit.charger();
     var modele = await (await fetch('modele/fiche_modele.xlsx')).arrayBuffer();
-    var octets = await root.FicheXlsx.generer(root.ExcelJS, modele, contenu, fiche);
+    return root.FicheXlsx.generer(root.ExcelJS, modele, contenu, fiche);
+  }
+  async function telechargerExcel(fiche) {
+    var octets = await genererExcel(fiche);
     var lien = document.createElement('a');
     lien.href = URL.createObjectURL(new Blob([octets], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     lien.download = root.FicheXlsx.nomFichier(fiche);
@@ -271,6 +287,7 @@
       ES.etat.photos = await ES.photos.liste(brouillon().id);
     },
     'lu': function (v, ev) { brouillon().lu = ev.target.checked; },
+    'excel-demande': function (v, ev) { brouillon().excel_demande = ev.target.checked; },
     'effacer-signature': function () { var b = brouillon(); b.signature = null; b.signatureRatio = null; },
     'excel': async function () {
       try { await telechargerExcel(ficheAEnvoyer(brouillon())); } catch (e) { o.toast('Excel impossible : ' + e.message); }
@@ -327,5 +344,6 @@
   }
 
   ES.assistant = { vue: vue, ACTIONS: ACTIONS, saisie: saisie, photosChoisies: photosChoisies, apresAffichage: apresAffichage,
-    feuilleGuide: feuilleGuide, lieu: lieu, chantier: chantier, telechargerExcel: telechargerExcel, chargerMemoire: chargerMemoire };
+    feuilleGuide: feuilleGuide, lieu: lieu, chantier: chantier, telechargerExcel: telechargerExcel, chargerMemoire: chargerMemoire,
+    genererExcel: genererExcel, ficheExcelDepuisServeur: ficheExcelDepuisServeur };
 })(window);

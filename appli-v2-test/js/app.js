@@ -26,7 +26,8 @@
     var f = ES.etat.feuille;
     if (!f) return '';
     var corps = { guide: function () { return ES.assistant.feuilleGuide(f.etape); }, compte: ES.accueil.feuilleCompte,
-      valider: ES.reception.feuilleValider, renvoyer: ES.reception.feuilleRenvoyer }[f.type]();
+      valider: ES.reception.feuilleValider, renvoyer: ES.reception.feuilleRenvoyer,
+      'rappel-materiel': ES.programmation.feuilleMateriel, 'rappel-coulage': ES.programmation.feuilleCoulage }[f.type]();
     return '<div class="scrim" data-a="fermer-feuille"><div class="sheet" role="dialog" aria-modal="true" data-interieur>' + corps + '</div></div>';
   }
   function cleEcran() { var e = ES.etat.ecran; return e.n + '|' + (e.id || '') + '|' + (ES.etat.brouillon ? ES.etat.brouillon.etape : ''); }
@@ -66,7 +67,19 @@
     ES.etat.photos = ES.etat.brouillon ? await ES.photos.liste(ES.etat.brouillon.id) : [];
     ES.etat.ecran = { n: 'accueil' };
     await rafraichirListe();
+    ES.notifications.rattacher();               // ce téléphone reçoit les notifications du compte connecté
+    await suivreLien();
     synchroniser();
+  }
+  // ouverture depuis une notification : ?fiche=…, ?rappel=incorporation&id=…, ?rappel=coulage&chantier=…&jour=…
+  async function suivreLien() {
+    var q = new URLSearchParams(location.search);
+    if (!q.toString()) return;
+    root.history.replaceState(null, '', location.pathname);
+    if (q.get('fiche')) await ES.reception.ACTIONS.ouvrir(q.get('fiche'));
+    else if (q.get('rappel') === 'incorporation') ES.etat.feuille = { type: 'rappel-materiel', id: q.get('id') };
+    else if (q.get('rappel') === 'coulage') ES.etat.feuille = { type: 'rappel-coulage', chantier: q.get('chantier'), jour: q.get('jour') };
+    if (ES.etat.feuille) await ES.programmation.preparerFeuille(ES.etat.feuille);
   }
 
   // ------------------------------------------------------------ clics, saisies, photos
@@ -75,7 +88,8 @@
     'rien': function () { /* puce d'information */ }
   };
   function trouverAction(nom) {
-    return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||
+    return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
+      ES.accueil.ACTIONS[nom] ||
       (ES.etat.ecran.n === 'assistant' && ES.assistant.ACTIONS[nom]);
   }
   document.addEventListener('click', async function (ev) {

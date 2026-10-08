@@ -64,7 +64,10 @@
         (f.signature_validation ? '<img class="sign-img sign-img--2" src="' + h(f.signature_validation) + '" alt="Signature du valideur"><span class="muted">Validée le ' + o.frDate((f.validee_le || '').slice(0, 10)) + '</span>' : '') + '</div>';
     }
     var actions = '';
-    if (f.etat === 'validee') actions = '<div class="lock">🔒 Validée et verrouillée : plus modifiable.</div>';
+    if (f.etat === 'validee') {
+      actions = '<div class="lock">🔒 Validée et verrouillée : plus modifiable.</div>' +
+        (peutValider() ? '<button class="btn btn--ghost btn--block" data-a="mail-factu">✉ Envoyer l\'Excel à la facturation</button>' : '');
+    }
     else if (aControler(f) && peutValider()) {
       actions = '<button class="btn btn--ok btn--big" data-a="valider">✓ Valider la fiche</button>' +
         '<button class="btn btn--ko btn--block" data-a="renvoyer">↩ Renvoyer à corriger</button>' +
@@ -83,6 +86,9 @@
       (ES.etat.profil.role === 'admin' ? '<div class="info">Vous validez <b>à la place du conducteur absent</b>. Votre nom apparaîtra comme valideur.</div>' : '') +
       '<p>La fiche sera <b>verrouillée</b> : plus aucune modification possible.</p>' +
       (f.ko ? '<div class="alert">⚠ Cette fiche a une anomalie : elle ne peut pas être validée. Renvoyez-la à corriger.</div>' : '') +
+      '<label class="check check--petit"><input type="checkbox" data-a="excel-validation"' + (ES.etat.feuille.excel ? ' checked' : '') + '>' +
+      '<span>Envoyer l\'Excel à la facturation<small>' + (f.excel_demande ? 'Demandé par ' + h(f.controleur) + ' à l\'envoi' : 'Non demandé à l\'envoi') +
+      ' · pièce jointe</small></span></label>' +
       '<div class="field"><div class="field__l">Signature du conducteur <small>avec le doigt</small></div>' +
       '<div class="sign"><canvas data-signature-validation aria-label="Zone de signature du valideur"></canvas>' + (sig ? '' : '<span class="sign__ph">Signez ici</span>') + '</div>' +
       '<div class="sign__pied"><span class="muted">' + h(ES.etat.profil.nom) + '</span>' + (sig ? '<button class="link" data-a="effacer-signature-validation">Effacer</button>' : '') + '</div></div>' +
@@ -114,6 +120,15 @@
     });
   }
 
+  // ------------------------------------------------------------ Excel de la fiche validée vers la facturation (fonction serveur)
+  async function envoyerExcelFacturation(f) {
+    var fiche = ES.assistant.ficheExcelDepuisServeur(f), contenu = await ES.gabarit.charger();
+    var octets = await ES.assistant.genererExcel(fiche);
+    var r = await root.Cloud.envoyerExcel(f, octets, root.FicheXlsx.objetMail(fiche), root.FicheXlsx.corpsMail(contenu, fiche),
+      root.FicheXlsx.nomFichier(fiche));
+    o.toast('✉ Excel envoyé à ' + r.destinataire);
+  }
+
   // ------------------------------------------------------------ « Corriger maintenant » : la fiche revient en brouillon
   function brouillonDeCorrection(f) {
     var aCorriger = f.points_a_corriger || [];
@@ -124,6 +139,7 @@
       id: f.id, serverVersion: f.version, chantier_id: f.chantier_id, batiment_id: f.batiment_id, niveau_id: f.niveau_id,
       logements: f.logements.slice(), date: f.date_fiche, coulage: f.coulage, chef: f.chef, chef_equipe: f.chef_equipe,
       compagnons: (f.compagnons || []).slice(), items: items, notes: Object.assign({}, f.notes || {}), observations: f.observations || '',
+      excel_demande: !!f.excel_demande,
       plan_indice: f.plan_indice, aCorriger: aCorriger.slice(), noteCorrection: f.note_correction, correctionDe: f.id,
       etape: aCorriger.length ? etapeDuPoint(aCorriger[0]) : 8, vues: 8
     });
@@ -140,14 +156,22 @@
         ES.etat.vues = (ES.etat.vues || []).concat([v]);
       } catch (e) { o.toast(e.message); ES.etat.ecran = { n: 'accueil' }; }
     },
-    'valider': function () { ES.etat.feuille = { type: 'valider', signature: null }; },
-    'effacer-signature-validation': function () { ES.etat.feuille = { type: 'valider', signature: null }; },
+    'valider': function () { ES.etat.feuille = { type: 'valider', signature: null, excel: !!ES.etat.ficheOuverte.excel_demande }; },
+    'effacer-signature-validation': function () { ES.etat.feuille.signature = null; },
+    'excel-validation': function (v, ev) { ES.etat.feuille.excel = ev.target.checked; },
     'valider-ok': async function () {
-      try {
-        ES.etat.ficheOuverte = await root.Cloud.validerFiche(ES.etat.ficheOuverte.id, ES.etat.feuille.signature);
-        o.toast('Fiche validée et verrouillée');
-      } catch (e) { o.toast(e.message); }
+      var signature = ES.etat.feuille.signature, envoyerExcel = ES.etat.feuille.excel, id = ES.etat.ficheOuverte.id;
       ES.etat.feuille = null;
+      try { ES.etat.ficheOuverte = await root.Cloud.validerFiche(id, signature); }
+      catch (e) { o.toast(e.message); return; }
+      o.toast('Fiche validée et verrouillée');
+      root.Cloud.evenementFiche(id, 'validee');                 // l'auteur et l'équipe sont prévenus
+      if (!envoyerExcel) return;
+      try { await envoyerExcelFacturation(ES.etat.ficheOuverte); }
+      catch (e) { o.toast('Fiche validée, mais Excel non envoyé (' + e.message + '). Réessayez avec « Envoyer l\'Excel ».'); }
+    },
+    'mail-factu': async function () {
+      try { await envoyerExcelFacturation(ES.etat.ficheOuverte); } catch (e) { o.toast('Excel non envoyé : ' + e.message); }
     },
     'renvoyer': function () {
       var f = ES.etat.ficheOuverte;
@@ -162,6 +186,7 @@
       try {
         ES.etat.ficheOuverte = await root.Cloud.renvoyerACorriger(ES.etat.ficheOuverte.id, ES.etat.feuille.points, ES.etat.feuille.note);
         o.toast('Fiche renvoyée à son auteur');
+        root.Cloud.evenementFiche(ES.etat.ficheOuverte.id, 'a_corriger');   // l'auteur et l'équipe sont prévenus
       } catch (e) { o.toast(e.message); }
       ES.etat.feuille = null;
     },

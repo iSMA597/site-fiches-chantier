@@ -1,13 +1,13 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-lotC-2';
+var VERSION = 'fiches-v2-lotC-3';
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js',
   'js/config.js', 'js/donnees/serveur.js', 'js/excel/fiche-xlsx.js',
   'js/commun/outils.js', 'js/fiche/gabarit.js', 'js/fiche/brouillon.js', 'js/fiche/photos.js',
   'js/fiche/signature.js', 'js/fiche/assistant.js', 'js/ecrans/connexion.js', 'js/ecrans/accueil.js',
-  'js/reseau/reception.js', 'js/reseau/programmation.js', 'js/app.js',
+  'js/reseau/reception.js', 'js/reseau/programmation.js', 'js/reseau/notifications.js', 'js/app.js',
   'modele/contenu.json', 'modele/fiche_modele.xlsx',
   'icons/logo.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
 ];
@@ -42,5 +42,25 @@ self.addEventListener('fetch', function (e) {
     return caches.match(e.request, { ignoreSearch: true }).then(function (m) {
       return m || (e.request.mode === 'navigate' ? caches.match('index.html') : Response.error());
     });
+  }));
+});
+
+// ---------------------------------------------------------------- notifications (lot C)
+// le serveur envoie { titre, corps, lien } ; un toucher ouvre l'appli sur la fiche ou le rappel
+self.addEventListener('push', function (e) {
+  var m = {};
+  try { m = e.data ? e.data.json() : {}; } catch (err) { m = { titre: 'Fiches chantier', corps: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(m.titre || 'Fiches chantier', {
+    body: m.corps || '', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: { lien: m.lien || '' }, lang: 'fr'
+  }));
+});
+
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var cible = new URL(e.notification.data && e.notification.data.lien ? e.notification.data.lien : './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (fenetres) {
+    var ouverte = fenetres.filter(function (f) { return f.url.indexOf(self.registration.scope) === 0; })[0];
+    if (ouverte) return ouverte.navigate(cible).then(function (f) { return (f || ouverte).focus(); });
+    return self.clients.openWindow(cible);
   }));
 });

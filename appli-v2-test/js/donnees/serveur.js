@@ -95,13 +95,14 @@
   }
   // déconnexion : rien ne reste sur un téléphone partagé (fiches non envoyées incluses, après confirmation côté écran)
   async function deconnexion() {
+    await desabonnerCeTelephone();                 // un téléphone partagé ne reçoit plus les notifications de ce compte
     try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* session locale effacée quand même */ }
     var cles = [];
     try { cles = await idb.keys(); } catch (e) { /* ignoré */ }
     for (var i = 0; i < cles.length; i++) {
       if (String(cles[i]).indexOf('es2_') === 0) { try { await idb.del(cles[i]); } catch (e) { /* ignoré */ } }
     }
-    try { ['es2_auth', 'es2_brouillon'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
+    try { ['es2_auth', 'es2_brouillon', 'es2_preparation'].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* ignoré */ }
     notifier();
   }
   async function profil() {
@@ -196,7 +197,7 @@
       items: f.items || {}, libres: {}, notes: f.notes || {}, plan_indice: f.plan_indice || '',
       signature: f.signature || '',
       signature_ratio: f.signatureRatio || '', remplace_id: f.remplace_id || '',
-      client_updated_at: f.editeLe || new Date().toISOString()
+      client_updated_at: f.editeLe || new Date().toISOString(), excel_demande: !!f.excel_demande
     };
   }
   // reporte la version serveur sur le brouillon en cours (évite qu'une modification ultérieure soit perdue)
@@ -244,6 +245,7 @@
           o.forEach(function (x) { if (x.id === e.id && x.rev === rev) { x.recue = true; x.fiche.serverVersion = row.version; x.erreur = null; } });
         });
         res.recues.push(row);
+        evenementFiche(row.id, 'envoyee');         // le conducteur, le patron et l'équipe sont prévenus
       }
       // photos (facultatives) : un échec ne bloque jamais les fiches suivantes
       var p = await envoyerPhotos(e.fiche);
@@ -336,6 +338,38 @@
   }
   async function programmations() { return verifier(await sb.from('programmations').select('*').order('date_prevue').limit(200)); }
   async function programmer(p) { return verifier(await sb.from('programmations').insert(p).select().single()); }
+
+  // ------------------------------------------------------------ V2, lot C : fonctions serveur (Excel, notifications)
+  async function appelerFonction(nom, corps) {
+    var r = await sb.functions.invoke(nom, { body: corps });
+    if (!r.error) return r.data;
+    var message = r.error.message;
+    try { message = (await r.error.context.json()).erreur || message; } catch (e) { /* réponse sans détail */ }
+    throw new Error(message);
+  }
+  // l'Excel de la fiche validée est déposé dans le stockage privé, puis le serveur l'envoie en pièce jointe
+  async function envoyerExcel(f, octets, objet, corps, nomFichier) {
+    var type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    var up = await sb.storage.from('excel').upload(f.chantier_id + '/' + f.id + '.xlsx', new Blob([octets], { type: type }),
+      { contentType: type, upsert: true });
+    if (up.error) throw traduire(up.error);
+    return appelerFonction('envoyer-excel', { fiche_id: f.id, objet: objet, corps: corps, nom_fichier: nomFichier });
+  }
+  // prévient les bonnes personnes (calculées par le serveur) ; un échec ne bloque jamais l'appli
+  function evenementFiche(id, evenement) {
+    return appelerFonction('notifier', { fiche_id: id, evenement: evenement }).catch(function () { return null; });
+  }
+  async function abonnerPush(abonnement) {
+    var j = abonnement.toJSON();
+    return verifier(await sb.rpc('abonner_push', { point_acces: j.endpoint, cle_p256dh: j.keys.p256dh, cle_auth: j.keys.auth }));
+  }
+  async function desabonnerCeTelephone() {
+    try {
+      var reg = root.navigator && root.navigator.serviceWorker && await root.navigator.serviceWorker.getRegistration();
+      var abonnement = reg && reg.pushManager && await reg.pushManager.getSubscription();
+      if (abonnement && sb) await sb.rpc('desabonner_push', { point_acces: abonnement.endpoint });
+    } catch (e) { /* hors réseau : l'abonnement sera remplacé à la prochaine connexion */ }
+  }
   async function valider(id) { return verifier(await sb.rpc('valider_fiche', { fid: id })); }
   async function marquerFacturee(ids) { return verifier(await sb.rpc('marquer_facturee', { ids: ids })); }
   async function profils() { return verifier(await sb.from('profiles').select('id,nom,role,actif').order('nom')); }
@@ -461,6 +495,7 @@
     fichesVisibles: fichesVisibles, monId: monId,
     marquerVue: marquerVue, mesVues: mesVues, validerFiche: validerFiche, renvoyerACorriger: renvoyerACorriger,
     memoire: memoire, programmations: programmations, programmer: programmer,
+    envoyerExcel: envoyerExcel, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
     marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
     suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat,
     comptes: comptes, creerCompte: creerCompte, changerMotDePasse: changerMotDePasse,

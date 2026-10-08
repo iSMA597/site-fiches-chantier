@@ -18,7 +18,8 @@
     return '<div class="prog"><strong>' + (demain ? 'Demain' : 'Le ' + o.frDate(x.date_prevue)) + ' · ' + h(c.nom) + '</strong>' +
       '<div class="muted">' + h(ES.assistant.lieu(x)) + ' · coulage ' + (x.coulage ? o.frDate(x.coulage) : 'à préciser') + '</div>' +
       '<div class="muted">Équipe : ' + h([x.chef, x.chef_equipe].concat(x.compagnons || []).filter(Boolean).join(', ')) + '</div>' +
-      (o.peutCreer(ES.etat.profil.role) ? '<button class="btn btn--sm btn--primary" data-a="demarrer" data-v="' + x.id + '">▶ Démarrer la fiche</button>' : '') + '</div>';
+      '<div class="prog__btns"><button class="btn btn--sm btn--ghost" data-a="rappel-materiel" data-v="' + x.id + '">🧰 Matériel à préparer</button>' +
+      (o.peutCreer(ES.etat.profil.role) ? '<button class="btn btn--sm btn--primary" data-a="demarrer" data-v="' + x.id + '">▶ Démarrer la fiche</button>' : '') + '</div></div>';
   }
   // section de l'accueil
   function section() {
@@ -76,8 +77,74 @@
     return '<div class="' + (restants.length ? 'warnbox' : 'info') + '"><b>🔎 Comparaison avec le planning</b><ul>' + lignes.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul></div>';
   }
 
+  // ------------------------------------------------------------ rappels de la veille (ouverts depuis la notification ou la carte)
+  var CLE_PREPARATION = 'es2_preparation';       // cases cochées, gardées sur ce téléphone
+  function preparation() { try { return JSON.parse(localStorage.getItem(CLE_PREPARATION) || '{}'); } catch (e) { return {}; } }
+  function boiteMemoire(memoire, titre) {
+    if (!memoire || !memoire.length) return '<div class="lock">👍 Aucun point oublié en mémoire sur ce chantier</div>';
+    return '<div class="warnbox"><b>🧠 ' + titre + '</b><ul>' + memoire.map(function (m) {
+      return '<li>' + h(m.label) + ' <small>(' + m.fois + '×)</small></li>';
+    }).join('') + '</ul></div>';
+  }
+  function listeACocher(programmationId, section, titre) {
+    var coches = preparation()[programmationId] || [];
+    var prets = section.points.filter(function (pt) { return coches.indexOf(pt.id) >= 0; }).length;
+    return '<h5>' + titre + ' <small class="muted">' + prets + '/' + section.points.length + ' prêt' + (prets > 1 ? 's' : '') + '</small></h5>' +
+      section.points.map(function (pt) {
+        var coche = coches.indexOf(pt.id) >= 0;
+        return '<button class="pick pick--ok" data-a="coche-materiel" data-v="' + programmationId + '|' + pt.id + '" aria-pressed="' + coche + '">' +
+          (coche ? '☑' : '☐') + ' ' + h(pt.label) + '</button>';
+      }).join('');
+  }
+  function feuilleMateriel() {
+    var f = ES.etat.feuille, x = (ES.etat.programmations || []).filter(function (p) { return p.id === f.id; })[0];
+    var fermer = '<button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button>';
+    if (!x) return '<div class="sheet__h"><strong>Incorporation</strong>' + fermer + '</div><p class="empty">Programmation introuvable.</p>';
+    var c = ES.assistant.chantier(x.chantier_id) || { nom: '' }, sections = ES.gabarit.sectionsV2();
+    var demain = x.date_prevue === o.isoJour(o.dansJours(1));
+    return '<div class="sheet__h"><strong>' + (demain ? 'Demain' : 'Le ' + o.frDate(x.date_prevue)) + ' : incorporation</strong>' + fermer + '</div>' +
+      '<p class="muted">' + h(c.nom) + ' · ' + h(ES.assistant.lieu(x)) + ' · coulage ' + (x.coulage ? o.frDate(x.coulage) : 'à préciser') + '</p>' +
+      boiteMemoire(f.memoire, 'Points déjà oubliés sur ce chantier') +
+      listeACocher(x.id, sections[1], '🧰 Matériel à préparer ce soir') +
+      listeACocher(x.id, sections[0], '📄 Documents à avoir');
+  }
+  function feuilleCoulage() {
+    var f = ES.etat.feuille, c = ES.assistant.chantier(f.chantier) || { nom: '' };
+    var fiches = (ES.etat.fiches || []).filter(function (x) { return x.chantier_id === f.chantier && x.coulage === f.jour && x.etat !== 'remplacee'; });
+    var nonValidees = fiches.filter(function (x) { return x.etat !== 'validee'; }).length;
+    return '<div class="sheet__h"><strong>Coulage demain : ' + h(c.nom) + '</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
+      (nonValidees ? '<div class="alert">⚠ ' + o.pluriel(nonValidees, 'fiche') + ' pas encore validée(s) : pas de coulage sans la validation du conducteur.</div>'
+        : '<div class="lock">✓ Toutes les fiches de ce coulage sont validées</div>') +
+      '<div class="list">' + fiches.map(function (x) {
+        var st = ES.reception.statut(x);
+        return '<button class="row-btn" data-a="ouvrir" data-v="' + x.id + '"><div class="row-btn__main"><strong>' + h(ES.assistant.lieu(x)) + '</strong>' +
+          '<span class="pills"><span class="pill ' + st[1] + '">' + st[0] + '</span></span></div><span class="chev" aria-hidden="true">›</span></button>';
+      }).join('') + '</div>' +
+      boiteMemoire(f.memoire, 'Points qui reviennent sur ce chantier') +
+      '<h5>Avant de couler</h5><ul class="matlist">' + ES.gabarit.rappels().slice(2, 5).map(function (r) { return '<li>' + h(r) + '</li>'; }).join('') + '</ul>';
+  }
+  // charge la mémoire du chantier avant d'afficher une feuille de rappel
+  async function preparerFeuille(feuille) {
+    var chantierId = feuille.chantier;
+    if (feuille.type === 'rappel-materiel') {
+      var x = (ES.etat.programmations || []).filter(function (p) { return p.id === feuille.id; })[0];
+      chantierId = x && x.chantier_id;
+    }
+    feuille.memoire = [];
+    if (chantierId) { try { feuille.memoire = await root.Cloud.memoire(chantierId); } catch (e) { /* hors réseau */ } }
+  }
+
   function basculer(liste, v) { return liste.indexOf(v) >= 0 ? liste.filter(function (x) { return x !== v; }) : liste.concat([v]); }
   var ACTIONS = {
+    'rappel-materiel': async function (v) {
+      ES.etat.feuille = { type: 'rappel-materiel', id: v };
+      await preparerFeuille(ES.etat.feuille);
+    },
+    'coche-materiel': function (v) {
+      var morceaux = v.split('|'), toutes = preparation();
+      toutes[morceaux[0]] = basculer(toutes[morceaux[0]] || [], morceaux[1]);
+      try { localStorage.setItem(CLE_PREPARATION, JSON.stringify(toutes)); } catch (e) { o.toast('Mémoire du téléphone pleine'); }
+    },
     'programmer': function () {
       ES.etat.programmation = { chantier_id: null, batiment_id: null, niveau_id: null, logements: [], date_prevue: null, coulage: null,
         chef: ES.etat.profil.role === 'chef_chantier' ? ES.etat.profil.nom : null, chef_equipe: null, compagnons: [] };
@@ -118,5 +185,6 @@
     }
   };
 
-  ES.programmation = { section: section, vueProgrammer: vueProgrammer, comparaison: comparaison, ACTIONS: ACTIONS };
+  ES.programmation = { section: section, vueProgrammer: vueProgrammer, comparaison: comparaison, ACTIONS: ACTIONS,
+    feuilleMateriel: feuilleMateriel, feuilleCoulage: feuilleCoulage, preparerFeuille: preparerFeuille };
 })(window);
