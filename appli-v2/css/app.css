@@ -329,3 +329,9 @@ input, textarea, select, .inp { font-size: 16px; }
 .cgu h2 { font-size: 16px; color: var(--navy); margin: 0 0 4px; }
 .cgu h3 { font-size: 14px; color: var(--navy); margin: 14px 0 4px; }
 .cgu p { margin: 0 0 8px; }
+
+/* nouveaux chantiers détectés dans Alobees */
+.reco { margin-bottom: 12px; }
+.reco__h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.reco .foot__row { margin-top: 10px; }
+.row-niv { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }

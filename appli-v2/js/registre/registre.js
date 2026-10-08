@@ -54,6 +54,10 @@
   function vueChantiers() {
     var liste = ES.etat.reg.chantiers || [];
     var out = patron() ? '' : '<div class="info">Lecture seule, sauf vos chantiers (modifiables).</div>';
+    // nouveaux chantiers détectés dans Alobees : le patron ou le conducteur les ajoute d'un appui
+    if (patron() || ES.etat.profil.role === 'conducteur') {
+      out += '<button class="btn btn--primary btn--block foot__row--marge" data-a="alobees-recos">🔎 Nouveaux chantiers détectés dans Alobees</button>';
+    }
     out += '<div class="list">' + liste.map(function (c) {
       return '<button class="row-btn" data-a="reg-chantier" data-v="' + c.id + '"><div class="row-btn__main"><strong>' + h(c.nom) + '</strong>' +
         '<span>' + h(c.adresse || '') + ' · ' + (c.batiments || []).length + ' bât. · ' + nbLogements(c) + ' logements' +

@@ -38,9 +38,109 @@
   function vue() {
     var a = ES.etat.alobees;
     if (!a.lu) return { haut: haut('Alobees', a.titre), contenu: BANDEAU + '<p class="empty">Lecture d\'Alobees…</p>', bas: '' };
-    var corps = a.mode === 'chantiers' ? vueChantiers(a) : a.mode === 'membres' ? vueMembres(a) : vuePlans(a);
+    var corps = a.mode === 'chantiers' ? vueChantiers(a) : a.mode === 'membres' ? vueMembres(a)
+      : a.mode === 'recos' ? (a.ajout ? vueAjout(a) : vueRecos(a)) : vuePlans(a);
     return { haut: haut('Alobees', a.titre), contenu: BANDEAU + corps, bas: '' };
   }
+
+  // ------------------------------------------------------------ nouveaux chantiers détectés (patron, conducteur)
+  function dateFr(iso) { return iso ? iso.split('-').reverse().join('/') : '—'; }
+  function nbLogements(structure) {
+    return structure.reduce(function (t, b) { return t + b.niveaux.reduce(function (u, n) { return u + n.logements; }, 0); }, 0);
+  }
+  function resumeStructure(structure) {
+    return structure.map(function (b) { return h(b.nom) + ' : ' + b.niveaux.map(function (n) { return o.nivL(n.num); }).join(', '); }).join(' · ');
+  }
+  function carteReco(c) {
+    var pret = c.etat === 'pret';
+    return '<div class="card reco"><div class="reco__h"><strong>' + h(c.nom) + '</strong>' +
+      '<span class="pill ' + (pret ? 'p-validee' : 'p-attente') + '">' + (pret ? 'plans prêts' : 'pas encore de plans') + '</span></div>' +
+      '<dl class="kv"><dt>Client</dt><dd>' + h(c.client || '—') + '</dd><dt>Adresse</dt><dd>' + h(c.adresse || c.ville || '—') + '</dd>' +
+      '<dt>Dates</dt><dd>' + dateFr(c.debut) + ' → ' + dateFr(c.fin) + (c.commence ? ' · <b>commencé</b>' : ' · à venir') + '</dd>' +
+      (c.reference ? '<dt>Référence</dt><dd>' + h(c.reference) + '</dd>' : '') +
+      '<dt>Plans d\'incorporation</dt><dd>' + (c.plans_incorporation.length ? c.plans_incorporation.map(function (p) {
+        return h(p.bat) + ' ' + o.nivL(p.niv) + (p.ind ? ' (ind ' + h(p.ind) + ')' : '');
+      }).join(', ') : 'aucun pour l\'instant') + '</dd>' +
+      '<dt>Structure lue</dt><dd>' + (c.structure.length ? resumeStructure(c.structure) : 'à saisir') + '</dd></dl>' +
+      '<div class="foot__row"><button class="btn btn--ghost" data-a="reco-ignorer" data-v="' + h(c.alobees_id) + '">Ignorer</button>' +
+      '<button class="btn btn--ok" data-a="reco-ajouter" data-v="' + h(c.alobees_id) + '">＋ Ajouter au Registre</button></div></div>';
+  }
+  function vueRecos(a) {
+    var r = a.liste;
+    var out = '<p class="lead">Chantiers <b>ouverts</b> dans Alobees, <b>pas terminés</b> et <b>pas encore dans le Registre</b>, les plus récents d\'abord. ' +
+      'Ajoutez ceux qui vous concernent : l\'appli crée le chantier, ses bâtiments et niveaux, et copie les plans d\'incorporation.</p>';
+    out += r.chantiers.length ? r.chantiers.map(carteReco).join('') : '<p class="empty">Aucun nouveau chantier à ajouter.</p>';
+    if (r.autres) out += '<p class="muted">… et ' + o.pluriel(r.autres, 'autre chantier') + ' ouvert(s) : ils apparaîtront ici quand les premiers seront traités.</p>';
+    if (r.ignores.length) {
+      out += '<h5>Chantiers ignorés</h5><div class="list">' + r.ignores.map(function (x) {
+        return '<div class="pick pick--grise">' + h(x.nom) + ' <button class="link" data-a="reco-retablir" data-v="' + h(x.alobees_id) + '">Rétablir</button></div>';
+      }).join('') + '</div>';
+    }
+    return out;
+  }
+  // confirmation avant l'ajout : logements par niveau à vérifier (pré-remplis d'après « NN logements »)
+  function vueAjout(a) {
+    var c = a.ajout, total = nbLogements(c.structure);
+    var out = '<h3>' + h(c.nom) + '</h3><p class="lead">Vérifiez le nombre de logements de chaque niveau' +
+      (c.total_logements ? ' (Alobees annonce <b>' + c.total_logements + ' logements</b>)' : '') + '. Tout reste modifiable ensuite dans le Registre.</p>';
+    out += c.structure.map(function (b, i) {
+      return '<div class="card"><strong>' + h(b.nom) + '</strong>' + b.niveaux.map(function (n, j) {
+        return '<div class="row-niv"><span>' + o.nivL(n.num) + '</span><span class="stepper">' +
+          '<button data-a="reco-logements" data-v="' + i + '|' + j + '|-1" aria-label="Un logement de moins">−</button><b>' + n.logements + '</b>' +
+          '<button data-a="reco-logements" data-v="' + i + '|' + j + '|1" aria-label="Un logement de plus">+</button></span></div>';
+      }).join('') + '<div class="foot__row"><button class="link" data-a="reco-niveau" data-v="' + i + '|-1">− niveau</button>' +
+        '<button class="link" data-a="reco-niveau" data-v="' + i + '|1">＋ niveau</button></div></div>';
+    }).join('') + '<button class="link" data-a="reco-batiment">＋ Ajouter un bâtiment</button>';
+    var ecart = c.total_logements && total !== c.total_logements;
+    out += '<p class="' + (ecart ? 'warnbox' : 'muted') + '">Total : <b>' + total + ' logements</b>' + (ecart ? ' (Alobees : ' + c.total_logements + ')' : '') + '</p>';
+    return out + '<div class="foot__row foot__row--marge"><button class="btn btn--ghost" data-a="reco-annuler">Retour</button>' +
+      '<button class="btn btn--ok" data-a="reco-confirmer"' + (c.structure.length ? '' : ' disabled') + '>Ajouter au Registre</button></div>';
+  }
+  async function relireRecos() {
+    ES.etat.alobees.liste = await root.Cloud.alobees('recommandations');
+  }
+  var ACTIONS_RECOS = {
+    'alobees-recos': function () {
+      return ouvrir('recos', 'Nouveaux chantiers', function () { return root.Cloud.alobees('recommandations'); });
+    },
+    'reco-ajouter': function (v) {
+      var c = ES.etat.alobees.liste.chantiers.filter(function (x) { return x.alobees_id === v; })[0];
+      var structure = c.structure.length ? c.structure : [{ nom: 'Bât A', niveaux: [{ num: 0, logements: 1 }] }];
+      ES.etat.alobees.ajout = Object.assign({}, c, { structure: JSON.parse(JSON.stringify(structure)) });
+    },
+    'reco-annuler': function () { ES.etat.alobees.ajout = null; },
+    'reco-logements': function (v) {
+      var p = v.split('|').map(Number), n = ES.etat.alobees.ajout.structure[p[0]].niveaux[p[1]];
+      n.logements = Math.min(99, Math.max(1, n.logements + p[2]));
+    },
+    'reco-niveau': function (v) {
+      var p = v.split('|').map(Number), niveaux = ES.etat.alobees.ajout.structure[p[0]].niveaux;
+      if (p[1] > 0 && niveaux.length < 61) niveaux.push({ num: niveaux.length ? niveaux[niveaux.length - 1].num + 1 : 0, logements: niveaux.length ? niveaux[niveaux.length - 1].logements : 1 });
+      else if (p[1] < 0 && niveaux.length > 1) niveaux.pop();
+    },
+    'reco-batiment': function () {
+      var s = ES.etat.alobees.ajout.structure;
+      if (s.length >= 30) return;
+      s.push({ nom: 'Bât ' + String.fromCharCode(65 + s.length), niveaux: [{ num: 0, logements: 1 }] });
+    },
+    'reco-confirmer': async function () {
+      var c = ES.etat.alobees.ajout;
+      var r = await root.Cloud.alobees('ajouter_chantier', { alobees_id: c.alobees_id, structure: c.structure });
+      o.toast('✓ ' + c.nom + ' ajouté au Registre' + (r.plans ? ' · ' + o.pluriel(r.plans, 'plan') + ' d\'incorporation copié(s)' : ''));
+      ES.etat.alobees.ajout = null;
+      await relireRecos();
+      if (ES.registre) await ES.registre.charger();
+      if (ES.app.rafraichirRegistreFiches) await ES.app.rafraichirRegistreFiches();
+    },
+    'reco-ignorer': async function (v) {
+      await root.Cloud.alobees('ignorer_chantier', { alobees_id: v });
+      await relireRecos();
+    },
+    'reco-retablir': async function (v) {
+      await root.Cloud.alobees('retablir_chantier', { alobees_id: v });
+      await relireRecos();
+    }
+  };
   function vueChantiers(a) {
     return '<p class="lead">' + o.pluriel(a.liste.length, 'chantier') + ' trouvés (nom, ville, client, dates). Cochez ceux à ajouter au Registre.</p><div class="list">' +
       a.liste.map(function (c) {
@@ -154,5 +254,6 @@
     return true;
   }
 
+  Object.keys(ACTIONS_RECOS).forEach(function (k) { ACTIONS[k] = ACTIONS_RECOS[k]; });
   ES.alobees = { vue: vue, saisie: saisie, ACTIONS: ACTIONS };
 })(window);

@@ -167,6 +167,7 @@
     root.history.replaceState(null, '', location.pathname);
     if (q.get('fiche')) await ES.reception.ACTIONS.ouvrir(q.get('fiche'));
     else if (q.get('registre') && ES.onglets.zones().indexOf('reg') >= 0) { await ES.registre.ouvrir(); await ES.registre.ACTIONS['reg-chantier'](q.get('registre')); }
+    else if (q.get('alobees') === 'nouveaux' && ES.onglets.zones().indexOf('reg') >= 0) { await ES.registre.ouvrir(); await ES.alobees.ACTIONS['alobees-recos'](); }
     else if (q.get('rappel') === 'incorporation') ES.etat.feuille = { type: 'rappel-materiel', id: q.get('id') };
     else if (q.get('rappel') === 'coulage') ES.etat.feuille = { type: 'rappel-coulage', chantier: q.get('chantier'), jour: q.get('jour') };
     if (ES.etat.feuille) await ES.programmation.preparerFeuille(ES.etat.feuille);
