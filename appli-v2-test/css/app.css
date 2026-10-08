@@ -275,3 +275,28 @@ input.code6 { letter-spacing: 12px; }
 .login__form { display: flex; flex-direction: column; gap: 12px; }
 .gros-picto { font-size: 54px; }
 .txt-attente { color: var(--yel); }
+
+/* ---------------------------------------------------------------- lot F : accessibilité (audit ECC a11y-architect, WCAG 2.2 AA) */
+/* contour du focus bien visible, même en plein soleil (3:1 minimum) */
+:focus-visible { outline: 3px solid var(--navy); outline-offset: 2px; box-shadow: 0 0 0 2px #fff; }
+/* contours des champs et de la zone de signature repérables (3:1) */
+textarea, .inp { border-color: var(--grey); }
+.sign { border-color: var(--grey); }
+.sign__ph { color: var(--grey); }
+/* cibles tactiles de 44 px (utilisation avec des gants) */
+.top__back, .avatar, .x, .qbtn, .stepper button { width: 44px; height: 44px; }
+.ph__x::after { content: ""; position: absolute; inset: -7px; }
+.steps { gap: 4px; }
+.steps button { min-width: 40px; height: 44px; }
+.btn--sm, .segment button, .pick, .link { min-height: 44px; }
+.cell { height: 44px; }
+/* état actif repérable sans la couleur */
+.tabs button[aria-current="page"] { box-shadow: inset 0 3px 0 var(--navy); }
+.cell i { font-size: 13px; }
+/* bouton « fichier » : le focus du champ caché se voit sur le bouton */
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+label.btn:focus-within { outline: 3px solid var(--navy); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* code à 6 chiffres lisible même zoomé */
+input.code6 { font-size: clamp(22px, 8vw, 32px); letter-spacing: .25em; }
+.inp--date { max-width: 260px; min-height: 48px; font-size: 16px; }

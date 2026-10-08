@@ -39,7 +39,6 @@
     var f = ES.etat.programmation, r = ES.etat.registre;
     var c = ES.assistant.chantier(f.chantier_id), bt = c && c.batiments.filter(function (b) { return b.id === f.batiment_id; })[0];
     var nv = bt && bt.niveaux.filter(function (n) { return n.id === f.niveau_id; })[0];
-    var jours = function (liste) { return liste.map(o.dansJours); };
     var out = '<p class="lead">La veille, l\'équipe reçoit un rappel (matériel, points souvent oubliés). Le jour J, la fiche est pré-remplie.</p>';
     out += champ('Chantier', (r.chantiers || []).map(function (x) { return puce('pg-chantier', x.id, f.chantier_id === x.id, x.nom); }).join(''));
     if (c) out += champ('Bâtiment', c.batiments.map(function (x) { return puce('pg-batiment', x.id, f.batiment_id === x.id, x.nom); }).join(''));
@@ -52,8 +51,8 @@
         return puce('pg-logement', cd, pris, cd, !pris && f.logements.length >= ES.brouillon.LOGEMENTS_MAX);
       }).join(''));
     }
-    out += champ('Date de l\'incorporation', jours([1, 2, 3, 4, 7]).map(function (d) { var iso = o.isoJour(d); return puce('pg-date', iso, f.date_prevue === iso, o.jourCourt(d)); }).join(''));
-    out += champ('Coulage prévu', jours([2, 3, 4, 7, 9]).map(function (d) { var iso = o.isoJour(d); return puce('pg-coulage', iso, f.coulage === iso, o.jourCourt(d)); }).join(''));
+    out += champ('Date de l\'incorporation', o.calendrier('pg-date-prevue', f.date_prevue, o.aujourdhui(), 'Date de l\'incorporation'));
+    out += champ('Coulage prévu', o.calendrier('pg-date-coulage', f.coulage, f.date_prevue || o.aujourdhui(), 'Date du coulage prévu'));
     out += champ('Chef de chantier', (r.chefs || []).map(function (n) { return puce('pg-chef', n, f.chef === n, n); }).join(''));
     out += champ('Compagnons', (r.compagnons || []).map(function (n) { return puce('pg-compagnon', n, f.compagnons.indexOf(n) >= 0, n); }).join(''));
     var complet = f.chantier_id && f.batiment_id && f.niveau_id && f.logements.length && f.date_prevue && f.compagnons.length;

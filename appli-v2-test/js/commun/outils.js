@@ -23,6 +23,11 @@
   var jourCourt = function (d) { return d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '') + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1); };
   var frDate = function (iso) { return iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : ''; };
 
+  // calendrier du téléphone (n'importe quelle date à partir de « min ») ; la date choisie arrive par l'événement « change »
+  function calendrier(saisie, valeur, min, libelle) {
+    return '<input class="inp inp--date" type="date" data-saisie="' + saisie + '" value="' + h(valeur || '') + '"' +
+      (min ? ' min="' + min + '"' : '') + ' aria-label="' + h(libelle) + '">';
+  }
   var initiales = function (nom) {
     return String(nom || '?').split(/[\s.]+/).filter(Boolean).map(function (m) { return m[0]; }).join('').slice(0, 2).toUpperCase();
   };
@@ -48,7 +53,7 @@
 
   ES.outils = {
     h: h, nivL: nivL, codeLogement: codeLogement, pluriel: pluriel, aujourdhui: aujourdhui, dansJours: dansJours,
-    isoJour: isoJour, jourCourt: jourCourt, frDate: frDate, initiales: initiales, uuid: uuid, toast: toast,
+    isoJour: isoJour, jourCourt: jourCourt, frDate: frDate, initiales: initiales, uuid: uuid, toast: toast, calendrier: calendrier,
     ROLES: ROLES, peutCreer: peutCreer
   };
 })(window);

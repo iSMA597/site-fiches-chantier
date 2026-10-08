@@ -126,11 +126,18 @@
       if (bouton) bouton.disabled = !(ES.etat.feuille.points.length || ev.target.value.trim());
     }
   });
+  // dates choisies dans le calendrier du téléphone
+  var DATES = {
+    'date-coulage': function (v) { return ES.assistant.ACTIONS['choisir-coulage'](v || null); },
+    'pg-date-prevue': function (v) { return ES.programmation.ACTIONS['pg-date'](v || null); },
+    'pg-date-coulage': function (v) { return ES.programmation.ACTIONS['pg-coulage'](v || null); }
+  };
   document.addEventListener('change', async function (ev) {
     var saisie = ev.target.dataset && ev.target.dataset.saisie;
     if (saisie === 'photo') { await ES.assistant.photosChoisies(ev.target); afficher(); }
     else if (saisie === 'import-structure') { await ES.importStructure.fichierChoisi(ev.target); afficher(); }
     else if (saisie === 'alobees-niveau') ES.alobees.saisie(ev.target);
+    else if (DATES[saisie]) { await DATES[saisie](ev.target.value); afficher(); }
   });
   document.addEventListener('submit', async function (ev) {
     var nom = ev.target.dataset && ev.target.dataset.formulaire;

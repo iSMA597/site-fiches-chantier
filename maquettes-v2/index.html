@@ -547,6 +547,9 @@ const initials = s => s.split(/\s|\./).filter(Boolean).map(w => w[0]).join('').s
 const pad = n => String(n).padStart(2, '0');
 function now() { CLOCK += 1 + Math.floor(Math.random() * 3); return pad(Math.floor(CLOCK / 60)) + ':' + pad(CLOCK % 60); }
 const fmtD = d => pad(d.getDate()) + '/' + pad(d.getMonth() + 1);
+/* calendrier du téléphone : n'importe quelle date (valeurs gardées en « jj/mm/aaaa ») */
+const versIso = v => v ? v.slice(6, 10) + '-' + v.slice(3, 5) + '-' + v.slice(0, 2) : '';
+const calendrier = (action, valeur, libelle) => `<input class="inp" type="date" data-cal="${action}" value="${versIso(valeur)}" min="${versIso(fmtD(AUJ) + '/' + AUJ.getFullYear())}" aria-label="${libelle}" style="max-width:240px">`;
 const jour = d => d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
 const lieu = f => `${f.bat} · ${nivL(f.niv)} · ${f.logs.join(' ')}`;
 const nbKo = f => Object.values(f.rep).filter(v => v === 'ko').length;
@@ -966,7 +969,6 @@ function cardProg(p, x) {
 const field = (l, inner) => `<div class="field"><div class="field__l">${l}</div><div class="chips">${inner}</div></div>`;
 function viewProg(p) {
   const f = p.scr.f, c = f.ch && chantier(f.ch), b = c && c.bats.find(x => x.nom === f.bat);
-  const jours = ks => ks.map(k => new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + k));
   const chip = (a, v, on, l, dis) => `<button class="chip" data-a="${a}" data-v="${h(v)}" aria-pressed="${on}" ${dis ? 'disabled' : ''}>${h(l || v)}</button>`;
   const pers = r => SRV.personnes.filter(x => x[1] === r).map(x => x[0]);
   let out = '<p class="lead">La veille à 18 h, l\'équipe reçoit un rappel : matériel à préparer et points souvent oubliés sur ce chantier. Le jour J, la fiche est déjà pré-remplie.</p>';
@@ -974,8 +976,8 @@ function viewProg(p) {
   if (c) out += field('Bâtiment', c.bats.map(x => chip('pg-bat', x.nom, f.bat === x.nom)).join(''));
   if (b) out += field('Niveau', b.niv.map((_, n) => chip('pg-niv', n, f.niv === n, nivL(n))).join(''));
   if (b && f.niv !== null) out += field('Logements <small>6 max</small>', Array.from({ length: b.niv[f.niv] }, (_, i) => { const cd = code(f.niv, i + 1); return chip('pg-log', cd, f.logs.includes(cd), cd, !f.logs.includes(cd) && f.logs.length >= 6); }).join(''));
-  out += field("Date de l'incorporation", jours([1, 2, 3, 4, 7]).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pg-date', v, f.date === v, jour(dt) + ' ' + fmtD(dt)); }).join(''));
-  out += field('Coulage prévu', jours([2, 3, 4, 7, 9]).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pg-coul', v, f.coulage === v, jour(dt) + ' ' + fmtD(dt)); }).join(''));
+  out += field("Date de l'incorporation", calendrier('pg-date', f.date, "Date de l'incorporation"));
+  out += field('Coulage prévu', calendrier('pg-coul', f.coulage, 'Date du coulage prévu'));
   out += field("Chef d'équipe <small>facultatif</small>", pers("Chef d'équipe").map(x => chip('pg-chefeq', x, f.chefEq === x)).join(''));
   out += field('Compagnons', pers('Compagnon').map(x => chip('pg-comp', x, f.comps.includes(x))).join(''));
   const ok = f.ch && f.bat && f.niv !== null && f.logs.length && f.date && f.coulage && f.comps.length;
@@ -1113,13 +1115,12 @@ function stepEmplacement(p, d) {
 }
 function stepEquipe(p, d) {
   const c = chantier(d.ch);
-  const days = [0, 1, 2, 3, 4, 7].map(k => new Date(AUJ.getFullYear(), AUJ.getMonth(), AUJ.getDate() + k));
   const chefs = SRV.personnes.filter(x => x[1] === 'Chef de chantier').map(x => x[0]);
   const chefsEq = SRV.personnes.filter(x => x[1] === "Chef d'équipe").map(x => x[0]);
   const comps = SRV.personnes.filter(x => x[1] === 'Compagnon').map(x => x[0]);
   const chip = (a, v, on, l) => `<button class="chip" data-a="${a}" data-v="${h(v)}" aria-pressed="${on}">${h(l || v)}</button>`;
   return `<div class="field"><div class="field__l">Date de l'incorporation</div><div class="chips">${chip('noop', '', true, "Aujourd'hui " + fmtD(AUJ))}</div></div>
-    <div class="field"><div class="field__l">Coulage prévu</div><div class="chips">${days.slice(1).map(dt => { const v = fmtD(dt) + '/2026'; return chip('pick-coul', v, d.coulage === v, jour(dt) + ' ' + fmtD(dt)); }).join('')}</div>
+    <div class="field"><div class="field__l">Coulage prévu</div>${calendrier('pick-coul', d.coulage, 'Date du coulage prévu')}
       ${c.coulage ? `<p class="muted" style="margin:6px 0 0">Prochain coulage connu sur ce chantier : ${pad(c.coulage[0])}/${pad(c.coulage[1])}</p>` : ''}</div>
     <div class="field"><div class="field__l">Chef de chantier</div><div class="chips">${chefs.map(x => chip('pick-chef', x, d.chef === x)).join('')}</div></div>
     <div class="field"><div class="field__l">Chef d'équipe <small>facultatif</small></div><div class="chips">${chefsEq.map(x => chip('pick-chefeq', x, d.chefEq === x)).join('')}</div></div>
@@ -1777,6 +1778,10 @@ document.getElementById('stage').addEventListener('change', ev => {
   }
   const ph = ev.target.closest('.phone');
   if (ph && ev.target.dataset.in === 'photo') onPhotos(PHONES[+ph.dataset.i], ev.target);
+  if (ph && ev.target.dataset.cal && ev.target.value) {          /* date choisie au calendrier */
+    const [a, m, j] = ev.target.value.split('-');
+    act(PHONES[+ph.dataset.i], ev.target.dataset.cal, j + '/' + m + '/' + a, ev);
+  }
 });
 document.addEventListener('keydown', ev => {
   if (ev.key !== 'Escape') return;

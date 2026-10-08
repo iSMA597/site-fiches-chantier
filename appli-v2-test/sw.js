@@ -1,6 +1,6 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-lotE-1';
+var VERSION = 'fiches-v2-lotE-2';
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js', 'js/vendor/qrcode.js',

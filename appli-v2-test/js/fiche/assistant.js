@@ -114,9 +114,8 @@
   // ------------------------------------------------------------ étape 3 : équipe et dates
   function etapeEquipe(b) {
     var r = ES.etat.registre;
-    var jours = [1, 2, 3, 4, 7].map(o.dansJours);
-    var out = champ('Date de l\'incorporation', puce('rien', '', true, 'Aujourd\'hui ' + o.frDate(b.date)));
-    out += champ('Coulage prévu', jours.map(function (d) { var iso = o.isoJour(d); return puce('choisir-coulage', iso, b.coulage === iso, o.jourCourt(d)); }).join(''));
+    var out = champ('Date de l\'incorporation', puce('rien', '', true, 'Le ' + o.frDate(b.date) + '/' + b.date.slice(0, 4)));
+    out += champ('Coulage prévu', o.calendrier('date-coulage', b.coulage, b.date, 'Date du coulage prévu'));
     out += champ('Chef de chantier', (r.chefs || []).map(function (n) { return puce('choisir-chef', n, b.chef === n, n); }).join(''));
     out += champ('Chef d\'équipe', (r.chefs_equipe || []).map(function (n) { return puce('choisir-chef-equipe', n, b.chef_equipe === n, n); }).join('') || '<span class="muted">aucun</span>', 'facultatif');
     out += champ('Compagnons', (r.compagnons || []).map(function (n) { return puce('choisir-compagnon', n, b.compagnons.indexOf(n) >= 0, n); }).join(''), 'plusieurs possibles');
