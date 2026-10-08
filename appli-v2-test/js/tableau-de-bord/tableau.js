@@ -22,7 +22,7 @@
     return '<div class="top">' + (retour ? '<button class="top__back" data-a="' + retour + '" aria-label="Retour">‹</button>'
       : '<img class="top__logo" src="icons/logo.png" alt="Euro Sanichauff">') +
       '<div class="top__t"><strong>' + h(titre) + '</strong><span>' + h(sousTitre) + '</span></div>' +
-      '<button class="avatar" data-a="compte" aria-label="Mon compte : ' + h(p.nom) + '">' + o.initiales(p.nom) + '</button></div>';
+      o.boutonActualiser() + '<button class="avatar" data-a="compte" aria-label="Mon compte : ' + h(p.nom) + '">' + o.initiales(p.nom) + '</button></div>';
   }
   function joursAvant(iso) {
     var jour = new Date(iso + 'T00:00:00'), auj = new Date(o.aujourdhui() + 'T00:00:00');

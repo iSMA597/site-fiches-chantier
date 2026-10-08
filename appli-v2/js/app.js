@@ -145,8 +145,30 @@
       ES.etat.sessionExpiree = !!(res && res.sessionExpiree);
     } catch (e) { /* une erreur réseau ne bloque rien : on réessaiera */ }
     await rafraichirListe();
+    await rafraichirRegistreFiches();
     afficherSiCalme();
   }
+  // tout recharger : fiches, programmations, chantiers, et l'écran ouvert (registre, tableau de bord)
+  var derniereMiseAJour = 0;
+  async function actualiserTout() {
+    derniereMiseAJour = Date.now();
+    await synchroniser();
+    var n = ES.etat.ecran.n;
+    try {
+      if (n === 'reg' || n === 'reg-chantier') {
+        await ES.registre.charger();
+        if (n === 'reg-chantier' && ES.etat.reg.chantierId) ES.etat.reg.plans = await root.Cloud.plans(ES.etat.reg.chantierId);
+      } else if (n === 'tdb') {
+        ES.etat.tdb = await root.Cloud.tdbChantiers();
+      }
+    } catch (e) { /* hors réseau : on garde l'affichage */ }
+  }
+  // retour dans l'appli (téléphone déverrouillé, appli rouverte) : mise à jour tout de suite, sans attendre la minute
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || !ES.etat.profil || Date.now() - derniereMiseAJour < 15000) return;
+    if (ES.etat.ecran.n === 'connexion' || ES.etat.ecran.n === 'conditions' || !navigator.onLine) return;
+    actualiserTout().then(afficherSiCalme);
+  });
   async function chargerSession() {
     ES.etat.profil = await root.Cloud.profil();
     ES.etat.monId = ES.etat.profil.id;                                     // connu même hors réseau (profil en cache)
@@ -181,7 +203,12 @@
     'fermer-feuille': function () { ES.etat.feuille = null; },
     'rien': function () { /* puce d'information */ },
     // session expirée (compte inchangé) : retour à la connexion sans rien effacer
-    'reconnecter': function () { ES.etat.ecran = { n: 'connexion' }; ES.etat.etapeConnexion = null; }
+    'reconnecter': function () { ES.etat.ecran = { n: 'connexion' }; ES.etat.etapeConnexion = null; },
+    'actualiser': async function () {
+      if (!navigator.onLine) { o.toast('Hors réseau : affichage de la dernière mise à jour'); return; }
+      await actualiserTout();
+      o.toast('✓ À jour');
+    }
   };
   function trouverAction(nom) {
     if (ES.etat.ecran.n === 'connexion') return actionsCommunes[nom] || ES.connexion.ACTIONS[nom] || ES.installation.ACTIONS[nom];

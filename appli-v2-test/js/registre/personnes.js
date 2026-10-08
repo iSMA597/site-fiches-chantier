@@ -100,8 +100,9 @@
       '<p class="centre txt-navy"><b>Valable 48 h · une seule fois</b></p>' +
       '<ol class="etapes-code"><li>Ouvrir l\'appli Fiches chantier (ou scanner le QR code)</li><li>« Première connexion : j\'ai un code à 6 chiffres »</li>' +
       '<li>Taper le code</li><li>Choisir son mot de passe, puis Face ID / empreinte</li></ol>' +
-      '<div class="foot__row"><a class="btn btn--ok" href="' + h(lienWhatsApp(f)) + '" target="_blank" rel="noopener">💬 Envoyer par WhatsApp</a>' +
-      (root.navigator.share ? '<button class="btn btn--ghost" data-a="code-partager">Autre (SMS…)</button>' : '') + '</div>' +
+      (root.navigator.share ? '<button class="btn btn--ok btn--block" data-a="code-partager">📤 Envoyer (WhatsApp, SMS, mail…)</button>' : '') +
+      '<div class="foot__row"><a class="btn btn--ghost" href="' + h(lienWhatsApp(f)) + '"' + (telephone() ? '' : ' target="_blank" rel="noopener"') + '>💬 WhatsApp direct</a>' +
+      '<button class="btn btn--ghost" data-a="code-copier">📋 Copier le message</button></div>' +
       '<p class="muted">À donner en main propre ou par message. Pas besoin d\'adresse mail. Ce code ne sera plus affiché ensuite.</p>';
   }
   // message prêt à envoyer : lien qui ouvre l'appli avec le code déjà rempli, et le code en clair (iPhone : à retaper)
@@ -111,7 +112,13 @@
       'Votre code d\'activation : ' + f.code + ' (valable 48 h, une seule fois).\n' +
       '1. Ouvrez le lien  2. Touchez « Installer l\'appli sur ce téléphone »  3. Ouvrez l\'appli installée et validez le code.';
   }
-  function lienWhatsApp(f) { return 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(f)); }
+  // sur téléphone : l'application WhatsApp elle-même (la page wa.me échoue souvent depuis l'appli installée sur iPhone) ;
+  // sur PC : WhatsApp Web
+  function telephone() { return /iPhone|iPad|iPod|Android/.test(root.navigator.userAgent); }
+  function lienWhatsApp(f) {
+    var texte = encodeURIComponent(messageInvitation(f));
+    return telephone() ? 'whatsapp://send?text=' + texte : 'https://wa.me/?text=' + texte;
+  }
   function feuilleAjout() {
     var f = ES.etat.feuille;
     return '<div class="sheet__h"><strong>Ajouter une personne</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
@@ -156,6 +163,10 @@
   var ACTIONS = {
     'code-partager': async function () {
       try { await root.navigator.share({ text: messageInvitation(ES.etat.feuille) }); } catch (e) { /* partage annulé */ }
+    },
+    'code-copier': async function () {
+      try { await root.navigator.clipboard.writeText(messageInvitation(ES.etat.feuille)); o.toast('Message copié : collez-le dans WhatsApp ou un SMS'); }
+      catch (e) { o.toast('Copie impossible sur ce téléphone : utilisez « Envoyer »'); }
     },
     'personne-ajout': function () { ES.etat.feuille = { type: 'personne-ajout', profil: 'compagnon' }; },
     // personne sans compte ajoutée en trop : retirée des choix d'équipe, son nom reste sur les anciennes fiches

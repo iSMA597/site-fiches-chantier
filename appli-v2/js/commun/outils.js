@@ -63,9 +63,12 @@
   // V2 : seuls le patron, le conducteur et le chef de chantier créent des fiches (le compagnon les reçoit)
   var peutCreer = function (role) { return role === 'admin' || role === 'conducteur' || role === 'chef_chantier'; };
 
+  // bouton « Actualiser » des barres du haut (accueil, tableau de bord, registre)
+  function boutonActualiser() { return '<button class="top__maj" data-a="actualiser" aria-label="Actualiser">↻</button>'; }
+
   ES.outils = {
     h: h, nivL: nivL, codeLogement: codeLogement, pluriel: pluriel, aujourdhui: aujourdhui, dansJours: dansJours,
     isoJour: isoJour, jourCourt: jourCourt, frDate: frDate, initiales: initiales, uuid: uuid, toast: toast, calendrier: calendrier, ouvrirOnglet: ouvrirOnglet,
-    ROLES: ROLES, peutCreer: peutCreer
+    ROLES: ROLES, peutCreer: peutCreer, boutonActualiser: boutonActualiser
   };
 })(window);

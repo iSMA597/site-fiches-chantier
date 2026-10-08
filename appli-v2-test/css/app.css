@@ -349,3 +349,7 @@ input, textarea, select, .inp { font-size: 16px; }
 .replie { margin: 14px 0; }
 .replie summary { cursor: pointer; font-weight: 700; color: var(--navy); min-height: 44px; display: flex; align-items: center; }
 .person__btns { display: flex; flex-direction: column; gap: 6px; margin-left: auto; }
+
+/* bouton « Actualiser » de la barre du haut */
+.top__maj { width: 44px; height: 44px; border-radius: 50%; font-size: 22px; line-height: 1; color: var(--navy); background: transparent; border: none; cursor: pointer; margin-left: auto; }
+.top__maj + .avatar { margin-left: 4px; }
