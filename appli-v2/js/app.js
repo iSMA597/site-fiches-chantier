@@ -16,6 +16,7 @@
     var e = ES.etat.ecran;
     switch (e.n) {
       case 'connexion': return ES.connexion.vue();
+      case 'conditions': return ES.conditions.vue();
       case 'assistant': return ES.assistant.vue();
       case 'envoyee': return ES.accueil.vueEnvoyee(e.id);
       case 'fiche': return ES.reception.vueFiche();
@@ -74,6 +75,7 @@
     var changementEcran = racine.dataset.cle !== cle;
     racine.dataset.cle = cle;
     if (ES.etat.ecran.n === 'assistant') ES.assistant.apresAffichage(racine);
+    if (ES.etat.ecran.n === 'conditions') ES.conditions.apresAffichage(racine);
     if (ES.etat.feuille) ES.reception.apresAffichage(racine);
     // titre de la page = titre de l'écran (annoncé à chaque changement)
     var titre = racine.querySelector('.top__t strong');
@@ -111,7 +113,7 @@
   function afficherSiCalme() {
     var a = document.activeElement;
     var saisie = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
-    if (ES.etat.ecran.n === 'connexion' || saisie || (ES.signature && ES.signature.enCours())) return;
+    if (ES.etat.ecran.n === 'connexion' || ES.etat.ecran.n === 'conditions' || saisie || (ES.signature && ES.signature.enCours())) return;
     afficher();
   }
 
@@ -147,6 +149,8 @@
     ES.etat.monId = ES.etat.profil.id;                                     // connu même hors réseau (profil en cache)
     if (await root.Cloud.verifierProprietaire(ES.etat.profil.id)) o.toast('Données d\'un autre compte effacées de ce téléphone');
     ES.etat.sessionExpiree = false;
+    // conditions d'utilisation : à cocher et signer avant tout usage (et à chaque nouvelle version)
+    if (await ES.conditions.aSigner()) { ES.etat.ecran = { n: 'conditions' }; return; }
     await rafraichirRegistreFiches();
     ES.etat.brouillon = o.peutCreer(ES.etat.profil.role) ? ES.brouillon.charger() : null;
     ES.etat.photos = ES.etat.brouillon ? await ES.photos.liste(ES.etat.brouillon.id) : [];
@@ -177,6 +181,7 @@
   };
   function trouverAction(nom) {
     if (ES.etat.ecran.n === 'connexion') return actionsCommunes[nom] || ES.connexion.ACTIONS[nom];
+    if (ES.etat.ecran.n === 'conditions') return ES.conditions.ACTIONS[nom] || ES.accueil.ACTIONS[nom];
     return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
       ES.onglets.ACTIONS[nom] || ES.tableau.ACTIONS[nom] || ES.registre.ACTIONS[nom] || ES.personnes.ACTIONS[nom] ||
       ES.alobees.ACTIONS[nom] || ES.importStructure.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||

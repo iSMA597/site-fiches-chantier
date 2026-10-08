@@ -142,7 +142,7 @@
     try {
       if (!(await session())) throw Object.assign(new Error('hors ligne'), { reseau: true });
       var ch = verifier(await sb.from('chantiers')
-        .select('id,nom,adresse,actif,conducteur_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),plans(id,niveau_id,titre,chemin,indice)')
+        .select('id,nom,adresse,actif,conducteur_id,alobees_id,batiments(id,nom,ordre,niveaux(id,num,nb_logements)),plans(id,niveau_id,titre,chemin,indice)')
         .eq('actif', true).order('nom'));
       // nom du conducteur de chaque chantier (affiché dans « La fiche sera envoyée à »)
       var idsConducteurs = ch.map(function (c) { return c.conducteur_id; }).filter(Boolean);
@@ -157,7 +157,7 @@
         format: 'eurosanichauff-config', version: 2, source: 'serveur', maj: new Date().toISOString(),
         chantiers: ch.map(function (c) {
           return {
-            id: c.id, nom: c.nom, adresse: c.adresse || '', conducteur: conducteurs[c.conducteur_id] || '', conducteur_id: c.conducteur_id || null,
+            id: c.id, nom: c.nom, adresse: c.adresse || '', conducteur: conducteurs[c.conducteur_id] || '', conducteur_id: c.conducteur_id || null, alobees: !!c.alobees_id,
             plans: (c.plans || []).map(function (p) { return { id: p.id, niveau_id: p.niveau_id, titre: p.titre, chemin: p.chemin, indice: p.indice }; }),
             batiments: (c.batiments || []).sort(parOrdre).map(function (b) {
               return {
@@ -366,13 +366,29 @@
     try { message = (await r.error.context.json()).erreur || message; } catch (e) { /* réponse sans détail */ }
     throw new Error(message);
   }
-  // l'Excel de la fiche validée est déposé dans le stockage privé, puis le serveur l'envoie en pièce jointe
-  async function envoyerExcel(f, octets, objet, corps, nomFichier) {
+  // l'Excel de la fiche validée est déposé dans le stockage privé ; ensuite le serveur l'envoie en pièce jointe
+  // à la facturation et / ou le dépose dans Alobees (<chantier> › « Fiches incorporation »)
+  async function preparerExcel(f, octets) {
     var type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     var up = await sb.storage.from('excel').upload(f.chantier_id + '/' + f.id + '.xlsx', new Blob([octets], { type: type }),
       { contentType: type, upsert: true });
     if (up.error) throw traduire(up.error);
-    return appelerFonction('envoyer-excel', { fiche_id: f.id, objet: objet, corps: corps, nom_fichier: nomFichier });
+  }
+  function envoyerExcel(f) { return appelerFonction('envoyer-excel', { fiche_id: f.id }); }
+  function deposerExcelAlobees(f) { return appelerFonction('alobees', { action: 'deposer_excel', fiche_id: f.id }); }
+  async function depotAlobees(ficheId) {
+    var r = await sb.from('depots_alobees').select('alobees_doc_id,depose_le,erreur').eq('fiche_id', ficheId).maybeSingle();
+    return r.error ? null : r.data;
+  }
+  // conditions d'utilisation : texte, état, acceptation signée (fonction serveur « conditions »)
+  function conditions(action, corps) { return appelerFonction('conditions', Object.assign({ action: action }, corps || {})); }
+  // lien de lecture (5 minutes) vers son propre PDF signé, le plus récent
+  async function monPdfConditions() {
+    var a = verifier(await sb.from('cgu_acceptations').select('chemin_pdf').eq('profile_id', await monId()).order('accepte_le', { ascending: false }).limit(1));
+    if (!a.length) throw new Error('Conditions pas encore signées.');
+    var s = await sb.storage.from('cgu').createSignedUrl(a[0].chemin_pdf, 300);
+    if (s.error) throw traduire(s.error);
+    return s.data.signedUrl;
   }
   // prévient les bonnes personnes (calculées par le serveur) ; un échec ne bloque jamais l'appli
   function evenementFiche(id, evenement) {
@@ -536,7 +552,8 @@
     fichesVisibles: fichesVisibles, monId: monId,
     marquerVue: marquerVue, mesVues: mesVues, validerFiche: validerFiche, renvoyerACorriger: renvoyerACorriger,
     memoire: memoire, programmations: programmations, programmer: programmer,
-    envoyerExcel: envoyerExcel, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
+    preparerExcel: preparerExcel, envoyerExcel: envoyerExcel, deposerExcelAlobees: deposerExcelAlobees, depotAlobees: depotAlobees,
+    conditions: conditions, monPdfConditions: monPdfConditions, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
     activationCompte: activationCompte, connexionPasskey: connexionPasskey, enregistrerPasskey: enregistrerPasskey,
     personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte,
     alobees: alobees, plansPerimes: plansPerimes,

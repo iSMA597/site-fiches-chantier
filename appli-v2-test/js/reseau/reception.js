@@ -13,6 +13,7 @@
     a_corriger: ['À corriger', 'p-ko'], remplacee: ['Remplacée', 'p-attente']
   };
   function statut(f) { return STATUTS[f.etat] || [f.etat, 'p-attente']; }
+  var DOSSIER_ALOBEES = 'Fiches auto-contrôle';       // seul dossier où l'appli écrit dans un chantier Alobees (ou un dossier au nom proche)
   // le serveur vérifie qu'il s'agit bien du conducteur DU chantier ; ici on n'affiche les boutons qu'aux bons profils
   function peutValider() { var r = ES.etat.profil.role; return r === 'admin' || r === 'conducteur'; }
   function aControler(f) { return f.etat === 'soumise' || f.etat === 'recue'; }
@@ -71,7 +72,7 @@
     var actions = '';
     if (f.etat === 'validee') {
       actions = '<div class="lock">🔒 Validée et verrouillée : plus modifiable.</div>' +
-        (peutValider() ? '<button class="btn btn--ghost btn--block" data-a="mail-factu">✉ Envoyer l\'Excel à la facturation</button>' : '');
+        (peutValider() ? '<button class="btn btn--ghost btn--block" data-a="mail-factu">✉ Envoyer l\'Excel à la facturation</button>' + blocAlobees(f) : '');
     }
     else if (aControler(f) && peutValider()) {
       actions = '<button class="btn btn--ok btn--big" data-a="valider">✓ Valider la fiche</button>' +
@@ -84,6 +85,16 @@
     return { haut: haut(c.nom), contenu: out, bas: '' };
   }
 
+  // Excel dans Alobees (<chantier> › « Fiches auto-contrôle ») : état du dépôt, ou bouton pour le faire
+  function chantierRelie(f) { var c = ES.assistant.chantier(f.chantier_id); return !!(c && c.alobees); }
+  function blocAlobees(f) {
+    if (!chantierRelie(f)) return '';
+    var d = f.depotAlobees;
+    if (d && d.alobees_doc_id) return '<p class="muted centre">📁 Excel déposé dans Alobees › ' + DOSSIER_ALOBEES + ' le ' + o.frDate((d.depose_le || '').slice(0, 10)) + '</p>';
+    return '<button class="btn btn--ghost btn--block" data-a="depot-alobees">📁 Déposer l\'Excel dans Alobees</button>' +
+      (d && d.erreur ? '<p class="muted centre">Alobees n\'a pas répondu au dernier essai : nouvel essai automatique cette nuit.</p>' : '');
+  }
+
   // ------------------------------------------------------------ feuilles : valider (signée) et renvoyer
   function feuilleValider() {
     var f = ES.etat.ficheOuverte, sig = ES.etat.feuille.signature;
@@ -94,6 +105,8 @@
       '<label class="check check--petit"><input type="checkbox" data-a="excel-validation"' + (ES.etat.feuille.excel ? ' checked' : '') + '>' +
       '<span>Envoyer l\'Excel à la facturation<small>' + (f.excel_demande ? 'Demandé par ' + h(f.controleur) + ' à l\'envoi' : 'Non demandé à l\'envoi') +
       ' · pièce jointe</small></span></label>' +
+      (chantierRelie(f) ? '<label class="check check--petit"><input type="checkbox" data-a="alobees-validation"' + (ES.etat.feuille.alobees ? ' checked' : '') + '>' +
+        '<span>Déposer l\'Excel dans Alobees<small>' + h((ES.assistant.chantier(f.chantier_id) || {}).nom || '') + ' › ' + DOSSIER_ALOBEES + '</small></span></label>' : '') +
       '<div class="field"><div class="field__l">Signature du conducteur <small>avec le doigt</small></div>' +
       '<div class="sign"><canvas data-signature-validation aria-label="Zone de signature du valideur"></canvas>' + (sig ? '' : '<span class="sign__ph">Signez ici</span>') + '</div>' +
       '<div class="sign__pied"><span class="muted">' + h(ES.etat.profil.nom) + '</span>' + (sig ? '<button class="link" data-a="effacer-signature-validation">Effacer</button>' : '') + '</div></div>' +
@@ -125,13 +138,20 @@
     });
   }
 
-  // ------------------------------------------------------------ Excel de la fiche validée vers la facturation (fonction serveur)
+  // ------------------------------------------------------------ Excel de la fiche validée : facturation (mail) et Alobees
+  // l'Excel est fabriqué sur le téléphone puis déposé dans le stockage privé ; le serveur fait le reste
+  async function preparerExcel(f) {
+    await ES.gabarit.charger();
+    await root.Cloud.preparerExcel(f, await ES.assistant.genererExcel(ES.assistant.ficheExcelDepuisServeur(f)));
+  }
   async function envoyerExcelFacturation(f) {
-    var fiche = ES.assistant.ficheExcelDepuisServeur(f), contenu = await ES.gabarit.charger();
-    var octets = await ES.assistant.genererExcel(fiche);
-    var r = await root.Cloud.envoyerExcel(f, octets, root.FicheXlsx.objetMail(fiche), root.FicheXlsx.corpsMail(contenu, fiche),
-      root.FicheXlsx.nomFichier(fiche));
+    var r = await root.Cloud.envoyerExcel(f);
     o.toast('✉ Excel envoyé à ' + r.destinataire);
+  }
+  async function deposerDansAlobees(f) {
+    var r = await root.Cloud.deposerExcelAlobees(f);
+    o.toast(r.deja ? 'L\'Excel est déjà dans Alobees' : '📁 Excel déposé dans Alobees › ' + DOSSIER_ALOBEES);
+    f.depotAlobees = await root.Cloud.depotAlobees(f.id);
   }
 
   // ------------------------------------------------------------ « Corriger maintenant » : la fiche revient en brouillon
@@ -159,6 +179,7 @@
       try {
         await root.Cloud.marquerVue(v);                 // badge éteint ; « reçue » pour le conducteur
         ES.etat.ficheOuverte = await root.Cloud.fiche(v);
+        if (ES.etat.ficheOuverte.etat === 'validee' && peutValider()) ES.etat.ficheOuverte.depotAlobees = await root.Cloud.depotAlobees(v);
         ES.etat.vues = (ES.etat.vues || []).concat([v]);
       } catch (e) { o.toast(e.message); ES.etat.ecran = { n: 'accueil' }; }
     },
@@ -167,22 +188,40 @@
       var plan = c.plans.filter(function (p) { return p.id === v; })[0];
       return o.ouvrirOnglet(root.Cloud.urlPlan(plan));
     },
-    'valider': function () { ES.etat.feuille = { type: 'valider', signature: null, excel: !!ES.etat.ficheOuverte.excel_demande }; },
+    'valider': function () {
+      ES.etat.feuille = { type: 'valider', signature: null, excel: !!ES.etat.ficheOuverte.excel_demande, alobees: chantierRelie(ES.etat.ficheOuverte) };
+    },
+    'alobees-validation': function (v, ev) { ES.etat.feuille.alobees = ev.target.checked; },
     'effacer-signature-validation': function () { ES.etat.feuille.signature = null; },
     'excel-validation': function (v, ev) { ES.etat.feuille.excel = ev.target.checked; },
     'valider-ok': async function () {
-      var signature = ES.etat.feuille.signature, envoyerExcel = ES.etat.feuille.excel, id = ES.etat.ficheOuverte.id;
+      var signature = ES.etat.feuille.signature, envoyerExcel = ES.etat.feuille.excel, versAlobees = ES.etat.feuille.alobees, id = ES.etat.ficheOuverte.id;
       ES.etat.feuille = null;
       try { ES.etat.ficheOuverte = await root.Cloud.validerFiche(id, signature); }
       catch (e) { o.toast(e.message); return; }
       o.toast('Fiche validée et verrouillée');
       root.Cloud.evenementFiche(id, 'validee');                 // l'auteur et l'équipe sont prévenus
-      if (!envoyerExcel) return;
-      try { await envoyerExcelFacturation(ES.etat.ficheOuverte); }
-      catch (e) { o.toast('Fiche validée, mais Excel non envoyé (' + e.message + '). Réessayez avec « Envoyer l\'Excel ».'); }
+      if (!envoyerExcel && !versAlobees) return;
+      var f = ES.etat.ficheOuverte;
+      try { await preparerExcel(f); }
+      catch (e) { o.toast('Fiche validée, mais Excel non préparé (' + e.message + '). Réessayez avec les boutons de la fiche.'); return; }
+      if (envoyerExcel) {
+        try { await envoyerExcelFacturation(f); }
+        catch (e) { o.toast('Fiche validée, mais Excel non envoyé (' + e.message + '). Réessayez avec « Envoyer l\'Excel ».'); }
+      }
+      if (versAlobees) {
+        try { await deposerDansAlobees(f); }
+        catch (e) { o.toast('Fiche validée, mais Excel pas encore dans Alobees (' + e.message + ').'); f.depotAlobees = await root.Cloud.depotAlobees(f.id); }
+      }
     },
     'mail-factu': async function () {
-      try { await envoyerExcelFacturation(ES.etat.ficheOuverte); } catch (e) { o.toast('Excel non envoyé : ' + e.message); }
+      try { await preparerExcel(ES.etat.ficheOuverte); await envoyerExcelFacturation(ES.etat.ficheOuverte); }
+      catch (e) { o.toast('Excel non envoyé : ' + e.message); }
+    },
+    'depot-alobees': async function () {
+      var f = ES.etat.ficheOuverte;
+      try { await preparerExcel(f); await deposerDansAlobees(f); }
+      catch (e) { o.toast('Excel pas déposé dans Alobees : ' + e.message); f.depotAlobees = await root.Cloud.depotAlobees(f.id); }
     },
     'renvoyer': function () {
       var f = ES.etat.ficheOuverte;
