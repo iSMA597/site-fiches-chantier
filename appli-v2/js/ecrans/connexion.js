@@ -13,7 +13,8 @@
   function passkeyPossible() { return !!root.PublicKeyCredential; }
   function erreur() { var e = ES.etat.erreurConnexion; return e ? '<p class="alert" role="alert">' + h(e) + '</p>' : ''; }
   function cadre(corps) {
-    return { haut: '', bas: '', contenu: '<div class="login"><img src="icons/logo.png" alt="Euro Sanichauff"><h1 class="login__titre">Fiches chantier</h1>' + corps + '</div>' };
+    return { haut: '', bas: '', contenu: '<div class="login"><img src="icons/logo.png" alt="Euro Sanichauff"><h1 class="login__titre">Fiches chantier</h1>' +
+      ES.installation.bandeau() + corps + '</div>' };
   }
 
   function vue() {
@@ -69,6 +70,8 @@
     await root.Cloud.activationCompte({ action: 'activer', code: a.code, mot_de_passe: m1 });
     await root.Cloud.connexion(a.identifiant, m1);
     ES.etat.activation = null;
+    ES.etat.codePrerempli = null;
+    ES.installation.oublierCode();                         // code utilisé : plus rien à garder sur le téléphone
     if (passkeyPossible()) ES.etat.etapeConnexion = 'passkey';
     else { ES.etat.etapeConnexion = null; await ES.app.chargerSession(); }
   }

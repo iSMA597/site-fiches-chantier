@@ -1,6 +1,6 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-reco-1';
+var VERSION = 'fiches-v2-install-1';
 // un cache par adresse : l'appli de test et la vraie appli ne s'effacent jamais l'une l'autre
 var CACHE = VERSION + '|' + self.registration.scope;
 var FICHIERS = [
@@ -8,7 +8,7 @@ var FICHIERS = [
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js', 'js/vendor/qrcode.js',
   'js/config.js', 'js/donnees/serveur.js', 'js/excel/fiche-xlsx.js',
   'js/commun/outils.js', 'js/fiche/gabarit.js', 'js/fiche/brouillon.js', 'js/fiche/photos.js',
-  'js/fiche/signature.js', 'js/fiche/assistant.js', 'js/ecrans/connexion.js', 'js/ecrans/conditions.js', 'js/ecrans/accueil.js',
+  'js/fiche/signature.js', 'js/fiche/assistant.js', 'js/ecrans/connexion.js', 'js/ecrans/conditions.js', 'js/ecrans/installation.js', 'js/ecrans/accueil.js',
   'js/reseau/reception.js', 'js/reseau/programmation.js', 'js/reseau/notifications.js',
   'js/ecrans/onglets.js', 'js/tableau-de-bord/tableau.js',
   'js/registre/registre.js', 'js/registre/personnes.js', 'js/registre/alobees.js', 'js/registre/import-structure.js', 'js/app.js',

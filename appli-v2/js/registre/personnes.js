@@ -84,8 +84,18 @@
       '<p class="centre txt-navy"><b>Valable 48 h · une seule fois</b></p>' +
       '<ol class="etapes-code"><li>Ouvrir l\'appli Fiches chantier (ou scanner le QR code)</li><li>« Première connexion : j\'ai un code à 6 chiffres »</li>' +
       '<li>Taper le code</li><li>Choisir son mot de passe, puis Face ID / empreinte</li></ol>' +
+      '<div class="foot__row"><a class="btn btn--ok" href="' + h(lienWhatsApp(f)) + '" target="_blank" rel="noopener">💬 Envoyer par WhatsApp</a>' +
+      (root.navigator.share ? '<button class="btn btn--ghost" data-a="code-partager">Autre (SMS…)</button>' : '') + '</div>' +
       '<p class="muted">À donner en main propre ou par message. Pas besoin d\'adresse mail. Ce code ne sera plus affiché ensuite.</p>';
   }
+  // message prêt à envoyer : lien qui ouvre l'appli avec le code déjà rempli, et le code en clair (iPhone : à retaper)
+  function messageInvitation(f) {
+    var prenom = String(f.nom || '').split(' ')[0];
+    return 'Bonjour ' + prenom + ', voici l\'appli Fiches chantier d\'Euro Sanichauff : ' + lienActivation(f.code) + '\n' +
+      'Votre code d\'activation : ' + f.code + ' (valable 48 h, une seule fois).\n' +
+      '1. Ouvrez le lien  2. Touchez « Installer l\'appli sur ce téléphone »  3. Ouvrez l\'appli installée et validez le code.';
+  }
+  function lienWhatsApp(f) { return 'https://wa.me/?text=' + encodeURIComponent(messageInvitation(f)); }
   function feuilleAjout() {
     var f = ES.etat.feuille;
     return '<div class="sheet__h"><strong>Ajouter une personne</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
@@ -128,6 +138,9 @@
   Object.assign(ES.registre.FORMULAIRES, FORMULAIRES);
 
   var ACTIONS = {
+    'code-partager': async function () {
+      try { await root.navigator.share({ text: messageInvitation(ES.etat.feuille) }); } catch (e) { /* partage annulé */ }
+    },
     'personne-ajout': function () { ES.etat.feuille = { type: 'personne-ajout', profil: 'compagnon' }; },
     'personne-profil': function (v) {
       var champ = document.querySelector('[data-formulaire="personne-ajout"] [name="nom"]');

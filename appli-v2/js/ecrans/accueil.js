@@ -113,6 +113,7 @@
       '<p class="muted">' + h(o.ROLES[p.role] || p.role) + '</p>' +
       ES.notifications.blocCompte(ES.etat.feuille.notifications || 'inactives') +
       ES.conditions.boutonCompte() +
+      ES.installation.boutonCompte() +
       (attente ? '<p class="alert">⚠ ' + o.pluriel(attente, 'fiche') + ' pas encore envoyée(s) : elles seront perdues si vous vous déconnectez.</p>' : '') +
       '<button class="btn btn--ghost btn--block foot__row--marge" data-a="deconnexion">Se déconnecter</button>';
   }

@@ -34,6 +34,7 @@
   var FEUILLES = {
     guide: function () { return ES.assistant.feuilleGuide(ES.etat.feuille.etape); },
     compte: function () { return ES.accueil.feuilleCompte(); },
+    installation: function () { return ES.installation.feuille(); },
     valider: function () { return ES.reception.feuilleValider(); },
     renvoyer: function () { return ES.reception.feuilleRenvoyer(); },
     'rappel-materiel': function () { return ES.programmation.feuilleMateriel(); },
@@ -181,9 +182,9 @@
     'reconnecter': function () { ES.etat.ecran = { n: 'connexion' }; ES.etat.etapeConnexion = null; }
   };
   function trouverAction(nom) {
-    if (ES.etat.ecran.n === 'connexion') return actionsCommunes[nom] || ES.connexion.ACTIONS[nom];
+    if (ES.etat.ecran.n === 'connexion') return actionsCommunes[nom] || ES.connexion.ACTIONS[nom] || ES.installation.ACTIONS[nom];
     if (ES.etat.ecran.n === 'conditions') return ES.conditions.ACTIONS[nom] || ES.accueil.ACTIONS[nom];
-    return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
+    return actionsCommunes[nom] || ES.installation.ACTIONS[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
       ES.onglets.ACTIONS[nom] || ES.tableau.ACTIONS[nom] || ES.registre.ACTIONS[nom] || ES.personnes.ACTIONS[nom] ||
       ES.alobees.ACTIONS[nom] || ES.importStructure.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||
       (ES.etat.ecran.n === 'assistant' && ES.assistant.ACTIONS[nom]);
@@ -258,8 +259,10 @@
       var etat = await root.Cloud.etatSession();
       if (etat === 'absente') {
         ES.etat.ecran = { n: 'connexion' };
-        var code = new URLSearchParams(location.search).get('code');          // QR code d'activation scanné
-        if (/^\d{6}$/.test(code || '')) { ES.etat.etapeConnexion = 'code'; ES.etat.codePrerempli = code; root.history.replaceState(null, '', location.pathname); }
+        var code = new URLSearchParams(location.search).get('code');          // QR code ou lien d'activation (WhatsApp…)
+        if (/^\d{6}$/.test(code || '')) { ES.installation.garderCode(code); root.history.replaceState(null, '', location.pathname); }
+        else code = ES.installation.codeGarde();                               // appli installée après avoir ouvert le lien
+        if (code) { ES.etat.etapeConnexion = 'code'; ES.etat.codePrerempli = code; }
       }
       else await chargerSession();
     } catch (e) {
