@@ -141,7 +141,7 @@
         format: 'eurosanichauff-config', version: 2, source: 'serveur', maj: new Date().toISOString(),
         chantiers: ch.map(function (c) {
           return {
-            id: c.id, nom: c.nom, adresse: c.adresse || '', conducteur: conducteurs[c.conducteur_id] || '',
+            id: c.id, nom: c.nom, adresse: c.adresse || '', conducteur: conducteurs[c.conducteur_id] || '', conducteur_id: c.conducteur_id || null,
             plans: (c.plans || []).map(function (p) { return { id: p.id, niveau_id: p.niveau_id, titre: p.titre, chemin: p.chemin }; }),
             batiments: (c.batiments || []).sort(parOrdre).map(function (b) {
               return {
@@ -309,7 +309,7 @@
   // ------------------------------------------------------------ lecture / actions bureau
   async function tableauBord() { return verifier(await sb.from('v_tableau_bord').select('*').order('chantier')); }
   async function logements(chantierId) {
-    return verifier(await sb.from('v_logements').select('batiment,batiment_ordre,niveau,num,k,code,statut')
+    return verifier(await sb.from('v_logements').select('batiment_id,batiment,batiment_ordre,niveau_id,niveau,num,k,code,statut,fiche_id')
       .eq('chantier_id', chantierId).order('batiment_ordre').order('num').order('k'));
   }
   async function fiches(chantierId) {
@@ -376,6 +376,8 @@
   async function modifierProfil(p) {
     return verifier(await sb.rpc('admin_modifier_profil', { pid: p.id, p_nom: p.nom, p_role: p.role, p_actif: p.actif }));
   }
+  // V2, lot D : une ligne par chantier (réservé au patron et au conducteur)
+  async function tdbChantiers() { return verifier(await sb.from('v_tdb_chantiers').select('*').order('chantier')); }
   async function suiviChantiers() { return verifier(await sb.from('v_suivi_chantiers').select('*').order('chantier')); }
   async function fichesParEtat(etat) {
     return verifier(await sb.from('v_fiches').select('*').eq('etat', etat).order('received_at', { ascending: false }).limit(300));
@@ -497,7 +499,7 @@
     memoire: memoire, programmations: programmations, programmer: programmer,
     envoyerExcel: envoyerExcel, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
     marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
-    suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat,
+    suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat, tdbChantiers: tdbChantiers,
     comptes: comptes, creerCompte: creerCompte, changerMotDePasse: changerMotDePasse,
     personnel: personnel, sauverPersonne: sauverPersonne,
     chantiersDetail: chantiersDetail, sauverChantier: sauverChantier,

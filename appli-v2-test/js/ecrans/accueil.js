@@ -88,7 +88,7 @@
       (ES.etat.fiches || []).forEach(function (f) { lignes.push(ligneServeur(f, true)); });
     }
     out += lignes.length ? '<div class="list">' + lignes.join('') + '</div>' : '<p class="empty">Aucune fiche pour l\'instant.</p>';
-    return { haut: barreHaut('Incorporation', p.nom + ' · ' + (o.ROLES[p.role] || p.role)), contenu: out, bas: '' };
+    return { haut: barreHaut('Incorporation', p.nom + ' · ' + (o.ROLES[p.role] || p.role)), contenu: out, bas: ES.onglets.barre('inc') };
   }
 
   function vueEnvoyee(id) {

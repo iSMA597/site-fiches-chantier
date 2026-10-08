@@ -18,6 +18,8 @@
       case 'envoyee': return ES.accueil.vueEnvoyee(e.id);
       case 'fiche': return ES.reception.vueFiche();
       case 'programmer': return ES.programmation.vueProgrammer();
+      case 'tdb': return ES.tableau.vue();
+      case 'tdb-chantier': return ES.tableau.vueChantier();
       case 'accueil': return ES.accueil.vue();
       default: return { haut: '', contenu: '<p class="empty">Chargement…</p>', bas: '' };
     }
@@ -27,7 +29,8 @@
     if (!f) return '';
     var corps = { guide: function () { return ES.assistant.feuilleGuide(f.etape); }, compte: ES.accueil.feuilleCompte,
       valider: ES.reception.feuilleValider, renvoyer: ES.reception.feuilleRenvoyer,
-      'rappel-materiel': ES.programmation.feuilleMateriel, 'rappel-coulage': ES.programmation.feuilleCoulage }[f.type]();
+      'rappel-materiel': ES.programmation.feuilleMateriel, 'rappel-coulage': ES.programmation.feuilleCoulage,
+      logement: ES.tableau.feuilleLogement }[f.type]();
     return '<div class="scrim" data-a="fermer-feuille"><div class="sheet" role="dialog" aria-modal="true" data-interieur>' + corps + '</div></div>';
   }
   function cleEcran() { var e = ES.etat.ecran; return e.n + '|' + (e.id || '') + '|' + (ES.etat.brouillon ? ES.etat.brouillon.etape : ''); }
@@ -89,7 +92,7 @@
   };
   function trouverAction(nom) {
     return actionsCommunes[nom] || ES.reception.ACTIONS[nom] || ES.programmation.ACTIONS[nom] || ES.notifications.ACTIONS[nom] ||
-      ES.accueil.ACTIONS[nom] ||
+      ES.onglets.ACTIONS[nom] || ES.tableau.ACTIONS[nom] || ES.accueil.ACTIONS[nom] ||
       (ES.etat.ecran.n === 'assistant' && ES.assistant.ACTIONS[nom]);
   }
   document.addEventListener('click', async function (ev) {

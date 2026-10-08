@@ -1,13 +1,14 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-lotC-3';
+var VERSION = 'fiches-v2-lotD-1';
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/vendor/exceljs.min.js', 'js/vendor/supabase.js', 'js/vendor/idb-keyval.js',
   'js/config.js', 'js/donnees/serveur.js', 'js/excel/fiche-xlsx.js',
   'js/commun/outils.js', 'js/fiche/gabarit.js', 'js/fiche/brouillon.js', 'js/fiche/photos.js',
   'js/fiche/signature.js', 'js/fiche/assistant.js', 'js/ecrans/connexion.js', 'js/ecrans/accueil.js',
-  'js/reseau/reception.js', 'js/reseau/programmation.js', 'js/reseau/notifications.js', 'js/app.js',
+  'js/reseau/reception.js', 'js/reseau/programmation.js', 'js/reseau/notifications.js',
+  'js/ecrans/onglets.js', 'js/tableau-de-bord/tableau.js', 'js/app.js',
   'modele/contenu.json', 'modele/fiche_modele.xlsx',
   'icons/logo.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
 ];
