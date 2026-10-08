@@ -1,6 +1,6 @@
 /* Appli V2 : service worker (fonctionnement hors ligne). Changer VERSION à chaque mise à jour.
    Même stratégie que la v1.3 : réseau d'abord, repli sur le cache si pas de réseau. */
-var VERSION = 'fiches-v2-lotF-2';
+var VERSION = 'fiches-v2-lotF-4';
 // un cache par adresse : l'appli de test et la vraie appli ne s'effacent jamais l'une l'autre
 var CACHE = VERSION + '|' + self.registration.scope;
 var FICHIERS = [

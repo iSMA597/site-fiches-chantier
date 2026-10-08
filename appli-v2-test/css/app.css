@@ -301,3 +301,25 @@ label.btn:focus-within { outline: 3px solid var(--navy); outline-offset: 2px; }
 input.code6 { font-size: clamp(22px, 8vw, 32px); letter-spacing: .25em; }
 .inp--date { max-width: 260px; min-height: 48px; font-size: 16px; }
 #toast:empty { display: none; }
+
+/* ---------------------------------------------------------------- grand écran (PC) : l'appli occupe toute la fenêtre */
+@media (min-width: 1100px) {
+  #appli { max-width: none; }
+  .main__in, .foot__row, .foot__hint { max-width: 1200px; }
+  .list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .list > h3 { grid-column: 1 / -1; }
+  .tdb-grid { grid-template-columns: 3fr 2fr; }
+  .ph-grid { grid-template-columns: repeat(5, 1fr); }
+  .sheet { max-width: 720px; }
+}
+@media (min-width: 1600px) {
+  .main__in, .foot__row, .foot__hint { max-width: 1500px; }
+  .list { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* ---------------------------------------------------------------- téléphone : l'écran reste dans son cadre (demande d'Ismael, 08/10) */
+/* pas de zoom par pincement ni double toucher, pas de page qui glisse ; seul le contenu défile, verticalement */
+html, body { overflow: hidden; overscroll-behavior: none; touch-action: manipulation; position: fixed; inset: 0; width: 100%; }
+.main { overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+/* champs à 16 px minimum : l'iPhone ne zoome plus en touchant un champ */
+input, textarea, select, .inp { font-size: 16px; }
