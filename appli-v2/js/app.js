@@ -204,6 +204,7 @@
     'rien': function () { /* puce d'information */ },
     // session expirée (compte inchangé) : retour à la connexion sans rien effacer
     'reconnecter': function () { ES.etat.ecran = { n: 'connexion' }; ES.etat.etapeConnexion = null; },
+    'mettre-a-jour': function () { location.reload(); },
     'actualiser': async function () {
       if (!navigator.onLine) { o.toast('Hors réseau : affichage de la dernière mise à jour'); return; }
       await actualiserTout();
@@ -280,9 +281,35 @@
   root.addEventListener('online', function () { o.toast('Réseau revenu : envoi des fiches en attente'); synchroniser(); });
   root.addEventListener('offline', function () { o.toast('Hors réseau : les fiches partiront au retour du réseau'); afficherSiCalme(); });
 
+  // ------------------------------------------------------------ nouvelle version de l'appli
+  // l'appli vérifie s'il y a une nouvelle version à l'ouverture et à chaque retour dedans ; quand elle est installée,
+  // la page se recharge toute seule, sauf pendant une fiche (bouton « Mettre à jour » à la place : rien n'est perdu)
+  function calmePourRecharger() {
+    return !ES.etat.feuille && ['assistant', 'programmer', 'conditions'].indexOf(ES.etat.ecran.n) < 0;
+  }
+  function enregistrerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    var dejaControlee = !!navigator.serviceWorker.controller, rechargee = false;
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') reg.update().catch(function () { /* hors réseau */ });
+      });
+    }).catch(function () { /* sans hors-ligne */ });
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (!dejaControlee || rechargee) { dejaControlee = true; return; }      // première installation : rien à recharger
+      if (calmePourRecharger()) { rechargee = true; location.reload(); return; }
+      ES.etat.nouvelleVersion = true;
+      afficherSiCalme();
+    });
+  }
+  function versionAppli() {
+    var m = document.querySelector('meta[name="version-appli"]');
+    return m ? m.content : 'locale';
+  }
+
   // ------------------------------------------------------------ démarrage
   async function demarrer() {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () { /* sans hors-ligne */ });
+    enregistrerServiceWorker();
     afficher();
     try {
       await ES.gabarit.charger();
@@ -304,7 +331,7 @@
     setInterval(function () { if (navigator.onLine) synchroniser(); }, 60000);   // filet de sécurité : envoi toutes les minutes
   }
 
-  ES.app = { afficher: afficher, synchroniser: synchroniser, rafraichirListe: rafraichirListe, chargerSession: chargerSession,
+  ES.app = { versionAppli: versionAppli, afficher: afficher, synchroniser: synchroniser, rafraichirListe: rafraichirListe, chargerSession: chargerSession,
     rafraichirRegistreFiches: rafraichirRegistreFiches };
   demarrer();
 })(window);

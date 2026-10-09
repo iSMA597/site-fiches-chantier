@@ -17,6 +17,9 @@
   }
   function etatReseau() {
     var attente = (ES.etat.outbox || []).filter(function (e) { return !e.recue; }).length;
+    if (ES.etat.nouvelleVersion) {
+      return '<div class="bandeau">✨ Nouvelle version de l\'appli prête <button class="link" data-a="mettre-a-jour">Mettre à jour</button></div>';
+    }
     if (ES.etat.sessionExpiree) {
       return '<div class="bandeau bandeau--off">🔒 Session expirée : reconnectez-vous pour envoyer vos fiches (rien n\'est perdu). ' +
         '<button class="link" data-a="reconnecter">Se reconnecter</button></div>';
@@ -116,7 +119,8 @@
       ES.conditions.boutonCompte() +
       ES.installation.boutonCompte() +
       (attente ? '<p class="alert">⚠ ' + o.pluriel(attente, 'fiche') + ' pas encore envoyée(s) : elles seront perdues si vous vous déconnectez.</p>' : '') +
-      '<button class="btn btn--ghost btn--block foot__row--marge" data-a="deconnexion">Se déconnecter</button>';
+      '<button class="btn btn--ghost btn--block foot__row--marge" data-a="deconnexion">Se déconnecter</button>' +
+      '<p class="muted centre">Version de l\'appli : ' + h(ES.app.versionAppli()) + '</p>';
   }
 
   var ACTIONS = {
