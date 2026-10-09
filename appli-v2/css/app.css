@@ -353,3 +353,14 @@ input, textarea, select, .inp { font-size: 16px; }
 /* bouton « Actualiser » de la barre du haut */
 .top__maj { width: 44px; height: 44px; border-radius: 50%; font-size: 22px; line-height: 1; color: var(--navy); background: transparent; border: none; cursor: pointer; margin-left: auto; }
 .top__maj + .avatar { margin-left: 4px; }
+
+/* glisser une ligne vers la gauche : boutons cachés derrière la ligne */
+.glisse { position: relative; overflow: hidden; border-radius: var(--radius); }
+.glisse--prog { border-radius: 12px; margin-bottom: 8px; }
+.glisse--prog .prog { margin-bottom: 0; }
+.glisse__actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+.glisse__btn { min-width: 88px; border: 0; padding: 0 12px; font-weight: 700; font-size: 14px; color: #fff; background: #5B6275; cursor: pointer; }
+.glisse__btn--danger { background: #C62828; }
+.glisse__contenu { position: relative; touch-action: pan-y; background: #fff; border-radius: inherit; }
+.glisse--ouverte .glisse__contenu { box-shadow: 4px 0 8px rgba(0,0,0,.12); }
+@media (prefers-reduced-motion: reduce) { .glisse__contenu { transition: none !important; } }

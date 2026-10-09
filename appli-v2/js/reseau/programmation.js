@@ -18,6 +18,9 @@
     return p.role === 'admin' || (p.role === 'conducteur' && c.conducteur_id === ES.etat.monId) || (p.role === 'chef_chantier' && x.cree_par === ES.etat.monId);
   }
   function carte(x) {
+    return o.glissable(carteSimple(x), [peutGerer(x) && { a: 'pg-annuler', v: x.id, t: 'Annuler', danger: true }], 'glisse--prog');
+  }
+  function carteSimple(x) {
     var c = ES.assistant.chantier(x.chantier_id) || { nom: '' };
     var demain = x.date_prevue === o.isoJour(o.dansJours(1));
     return '<div class="prog"><strong>' + (demain ? 'Demain' : 'Le ' + o.frDate(x.date_prevue)) + ' · ' + h(c.nom) + '</strong>' +

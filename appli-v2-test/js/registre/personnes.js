@@ -48,9 +48,11 @@
     out += '<div class="info">Pas d\'inscription libre : le bureau crée chaque personne et lui remet un <b>code à 6 chiffres</b> (48 h, une seule fois). L\'employé choisit lui-même son mot de passe.</div>';
     var comptes = ES.etat.reg.personnes || [];
     var ligneCompte = function (p) {
-      return '<button class="person person--btn" data-a="personne" data-v="' + p.id + '"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span>' +
+      var ligne = '<button class="person person--btn" data-a="personne" data-v="' + p.id + '"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span>' +
         '<div><strong>' + h(p.nom) + '</strong><br>' + h(libelleProfil(p)) + '<br><span class="muted">Identifiant : ' + h(p.identifiant) + ' · ' + (ETATS[p.etat_compte] || '') + '</span></div>' +
         '<span class="chev" aria-hidden="true">›</span></button>';
+      return o.glissable(ligne, [enAttente(p) && { a: 'personne-inviter', v: p.id, t: 'Inviter' },
+        jamaisActive(p) && { a: 'personne-supprimer', v: p.id, t: 'Supprimer', danger: true }]);
     };
     out += '<div class="list">' + comptes.filter(function (p) { return p.actif; }).map(ligneCompte).join('') + '</div>';
     var desactives = comptes.filter(function (p) { return !p.actif; });
@@ -60,10 +62,11 @@
     var sans = ES.etat.reg.sansCompte || [];
     if (sans.length) {
       out += '<h3>Sur les fiches, sans compte (' + sans.length + ')</h3><div class="list">' + sans.map(function (p) {
-        return '<div class="person"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span><div><strong>' + h(p.nom) + '</strong><br>' +
+        return o.glissable('<div class="person"><span class="avatar" aria-hidden="true">' + o.initiales(p.nom) + '</span><div><strong>' + h(p.nom) + '</strong><br>' +
           '<span class="muted">' + h(FONCTIONS[p.fonction] || p.fonction) + '</span></div>' +
           '<span class="person__btns"><button class="btn btn--sm btn--ghost" data-a="personne-compte" data-v="' + h(p.nom) + '|' + p.fonction + '">Créer son compte</button>' +
-          '<button class="btn btn--sm btn--ghost" data-a="personnel-retirer" data-v="' + p.id + '" aria-label="Retirer ' + h(p.nom) + ' de la liste">Retirer</button></span></div>';
+          '<button class="btn btn--sm btn--ghost" data-a="personnel-retirer" data-v="' + p.id + '" aria-label="Retirer ' + h(p.nom) + ' de la liste">Retirer</button></span></div>',
+          [{ a: 'personnel-retirer', v: p.id, t: 'Retirer', danger: true }]);
       }).join('') + '</div>';
     }
     var retires = ES.etat.reg.retires || [];
@@ -139,10 +142,17 @@
       (moi ? '' : '<div class="field"><div class="field__l">Profil</div><div class="chips">' + roles.map(function (r) {
         return '<button class="chip" data-a="personne-role" data-v="' + r[0] + '" aria-pressed="' + (p.role === r[0]) + '"' + (p.actif ? '' : ' disabled') + '>' + r[1] + '</button>';
       }).join('') + '</div></div>') +
-      (p.actif ? '<button class="btn btn--ghost btn--block" data-a="personne-code">🔑 Nouveau code (mot de passe oublié)</button>' : '') +
+      (enAttente(p) ? '<button class="btn btn--ok btn--block" data-a="personne-inviter" data-v="' + p.id + '">📤 Envoyer l\'invitation (lien + code)</button>' +
+          '<p class="muted">Le code n\'est montré qu\'une fois : « Envoyer l\'invitation » en refait un et ouvre l\'envoi (WhatsApp, SMS…).</p>'
+        : (p.actif ? '<button class="btn btn--ghost btn--block" data-a="personne-code">🔑 Nouveau code (mot de passe oublié)</button>' : '')) +
       (moi ? '' : (p.actif ? '<button class="btn btn--ko btn--block foot__row--marge" data-a="personne-desactiver">⛔ Désactiver le compte (départ)</button>'
-        : '<button class="btn btn--ok btn--block foot__row--marge" data-a="personne-reactiver">↺ Réactiver le compte</button>'));
+        : '<button class="btn btn--ok btn--block foot__row--marge" data-a="personne-reactiver">↺ Réactiver le compte</button>')) +
+      (jamaisActive(p) ? '<button class="btn btn--ghost btn--block txt-ko" data-a="personne-supprimer" data-v="' + p.id + '">🗑 Supprimer ce compte (jamais activé)</button>' : '');
   }
+  // compte jamais activé : pas encore de connexion → on peut renvoyer l'invitation, ou le supprimer (créé en trop)
+  function enAttente(p) { return p.actif && (p.etat_compte === 'code' || p.etat_compte === 'code_expire'); }
+  function jamaisActive(p) { return p.id !== ES.etat.monId && !p.last_sign_in_at && (enAttente(p) || p.etat_compte === 'desactive'); }
+  function personneDe(id) { return (ES.etat.reg.personnes || []).filter(function (x) { return x.id === id; })[0]; }
 
   function montrerCode(r, nouveau) {
     ES.etat.feuille = { type: 'code', nom: r.nom || ES.etat.feuille.nom, identifiant: r.identifiant, code: r.code, nouveau: nouveau };
@@ -206,6 +216,23 @@
       var p = (ES.etat.reg.personnes || []).filter(function (x) { return x.id === ES.etat.feuille.id; })[0];
       if (!root.confirm('Désactiver le compte de ' + p.nom + ' ? Il ne pourra plus se connecter, tout de suite.')) return;
       try { await root.Cloud.basculerCompte(p.id, false); await charger(); o.toast('Compte désactivé'); } catch (e) { o.toast(e.message); }
+    },
+    // nouveau code + feuille d'envoi (WhatsApp, SMS…) : depuis la fiche de la personne ou la ligne glissée
+    'personne-inviter': async function (v) {
+      var p = personneDe(v);
+      if (!p) return;
+      var r = await root.Cloud.nouveauCode(p.id);
+      r.nom = p.nom;
+      montrerCode(r, false);
+      await charger();
+    },
+    'personne-supprimer': async function (v) {
+      var p = personneDe(v);
+      if (!p || !root.confirm('Supprimer le compte de ' + p.nom + ' ? Il n\'a jamais été activé. La personne passe dans « Retirés de la liste » (rétablissable).')) return;
+      ES.etat.feuille = null;
+      await root.Cloud.supprimerCompte(p.id);
+      o.toast('Compte de ' + p.nom + ' supprimé');
+      await charger();
     },
     'personne-reactiver': async function () {
       try { await root.Cloud.basculerCompte(ES.etat.feuille.id, true); await charger(); o.toast('Compte réactivé'); } catch (e) { o.toast(e.message); }

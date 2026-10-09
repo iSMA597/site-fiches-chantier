@@ -59,11 +59,13 @@
       out += '<button class="btn btn--primary btn--block foot__row--marge" data-a="alobees-recos">🔎 Nouveaux chantiers détectés dans Alobees</button>';
     }
     out += '<div class="list">' + liste.map(function (c) {
-      return '<button class="row-btn" data-a="reg-chantier" data-v="' + c.id + '"><div class="row-btn__main"><strong>' + h(c.nom) + '</strong>' +
+      var actions = [peutModifier(c) && c.actif !== false && { a: 'chantier-archiver-liste', v: c.id, t: 'Archiver' },
+        patron() && { a: 'chantier-supprimer-liste', v: c.id, t: 'Supprimer', danger: true }];
+      return o.glissable('<button class="row-btn" data-a="reg-chantier" data-v="' + c.id + '"><div class="row-btn__main"><strong>' + h(c.nom) + '</strong>' +
         '<span>' + h(c.adresse || '') + ' · ' + (c.batiments || []).length + ' bât. · ' + nbLogements(c) + ' logements' +
         (c.conducteur_id ? ' · conducteur ' + h(nomProfil(c.conducteur_id)) : '') + '</span></div>' +
         (c.actif === false ? '<span class="pill p-attente">archivé</span>' : '') +
-        (peutModifier(c) ? '<span class="pill p-envoyee">modifiable</span>' : '') + '<span class="chev" aria-hidden="true">›</span></button>';
+        (peutModifier(c) ? '<span class="pill p-envoyee">modifiable</span>' : '') + '<span class="chev" aria-hidden="true">›</span></button>', actions);
     }).join('') + '</div>';
     if (patron()) {
       out += '<button class="btn btn--ghost btn--block foot__row--marge" data-a="alobees-chantiers">⇩ Importer des chantiers depuis Alobees</button>' +
@@ -269,6 +271,9 @@
       await apresChangementChantier();
     },
     'chantier-supprimer': function () { ES.etat.feuille = { type: 'chantier-supprimer', nePlusProposer: true }; },
+    // depuis la liste (ligne glissée) : même confirmation que dans la fiche du chantier
+    'chantier-supprimer-liste': function (v) { ES.etat.reg.chantierId = v; ES.etat.feuille = { type: 'chantier-supprimer', nePlusProposer: true }; },
+    'chantier-archiver-liste': function (v) { ES.etat.reg.chantierId = v; return ACTIONS['chantier-archiver'](); },
     'chantier-supprimer-alobees': function (v, ev) { ES.etat.feuille.nePlusProposer = ev.target.checked; },
     'chantier-supprimer-ok': async function () {
       var c = chantierOuvert(), nePlus = ES.etat.feuille.nePlusProposer;

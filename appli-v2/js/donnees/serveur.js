@@ -434,6 +434,8 @@
   async function creerPersonne(nom, profil) { return verifier(await sb.rpc('admin_creer_personne', { p_nom: nom, p_profil: profil })); }
   async function nouveauCode(profileId) { return verifier(await sb.rpc('admin_nouveau_code', { pid: profileId })); }
   async function basculerCompte(profileId, actif) { return verifier(await sb.rpc('admin_activer_compte', { pid: profileId, p_actif: actif })); }
+  // compte créé en trop, jamais activé (patron) : supprimé ; la personne passe dans « Retirés de la liste »
+  async function supprimerCompte(profileId) { return verifier(await sb.rpc('admin_supprimer_compte', { pid: profileId })); }
   function alobees(action, corps) { return appelerFonction('alobees', Object.assign({ action: action }, corps || {})); }
   async function plansPerimes() { return verifier(await sb.from('v_plans_perimes').select('*')); }
 
@@ -577,7 +579,7 @@
     supprimerChantier: supprimerChantier, archiverChantier: archiverChantier, retirerPersonnel: retirerPersonnel,
     modifierProgrammation: modifierProgrammation, annulerProgrammation: annulerProgrammation, retirerFiche: retirerFiche, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
     activationCompte: activationCompte, connexionPasskey: connexionPasskey, enregistrerPasskey: enregistrerPasskey,
-    personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte,
+    personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte, supprimerCompte: supprimerCompte,
     alobees: alobees, plansPerimes: plansPerimes,
     marquerFacturee: marquerFacturee, profils: profils, modifierProfil: modifierProfil,
     suiviChantiers: suiviChantiers, fichesParEtat: fichesParEtat, tdbChantiers: tdbChantiers,

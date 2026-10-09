@@ -241,6 +241,11 @@
       catch (e) { o.toast('Excel pas déposé dans Alobees : ' + e.message); f.depotAlobees = await root.Cloud.depotAlobees(f.id); }
     },
     'fiche-retirer': function () { ES.etat.feuille = { type: 'retirer-fiche', motif: '' }; },
+    // depuis la liste (ligne glissée) : la fiche est chargée, puis la même confirmation avec motif
+    'fiche-retirer-liste': async function (v) {
+      ES.etat.ficheOuverte = await root.Cloud.fiche(v);
+      ES.etat.feuille = { type: 'retirer-fiche', motif: '' };
+    },
     'retirer-ok': async function () {
       var motif = (ES.etat.feuille.motif || '').trim(), id = ES.etat.ficheOuverte.id;
       ES.etat.feuille = null;
@@ -277,6 +282,6 @@
     }
   };
 
-  ES.reception = { vueFiche: vueFiche, feuilleValider: feuilleValider, feuilleRenvoyer: feuilleRenvoyer, feuilleRetirer: feuilleRetirer, apresAffichage: apresAffichage,
+  ES.reception = { vueFiche: vueFiche, feuilleValider: feuilleValider, feuilleRenvoyer: feuilleRenvoyer, feuilleRetirer: feuilleRetirer, peutRetirer: peutRetirer, apresAffichage: apresAffichage,
     ACTIONS: ACTIONS, statut: statut, aControler: aControler, peutValider: peutValider };
 })(window);

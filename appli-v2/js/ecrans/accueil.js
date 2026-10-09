@@ -39,7 +39,8 @@
   function ligneServeur(f, montrerAuteur) {
     var s = ES.reception.statut(f);
     var nouvelle = ES.reception.aControler(f) && (ES.etat.vues || []).indexOf(f.id) < 0 && f.created_by !== ES.etat.monId;
-    return ligne(f, s[0], s[1], true, 'coulage ' + o.frDate(f.coulage) + (montrerAuteur ? ' · chef ' + (f.chef || '?') : ''), nouvelle);
+    var html = ligne(f, s[0], s[1], true, 'coulage ' + o.frDate(f.coulage) + (montrerAuteur ? ' · chef ' + (f.chef || '?') : ''), nouvelle);
+    return o.glissable(html, [ES.reception.peutRetirer(f) && { a: 'fiche-retirer-liste', v: f.id, t: 'Retirer', danger: true }]);
   }
   // fiches reçues : celles des autres (le serveur ne renvoie que ce que le profil a le droit de voir)
   function recues() { return (ES.etat.fiches || []).filter(function (f) { return f.created_by !== ES.etat.monId; }); }
