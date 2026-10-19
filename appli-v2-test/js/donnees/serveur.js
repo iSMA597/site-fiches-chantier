@@ -356,7 +356,11 @@
     return verifier(await sb.from('v_memoire_erreurs').select('point,label,fois').eq('chantier_id', chantierId));
   }
   async function programmations() { return verifier(await sb.from('programmations').select('*').order('date_prevue').limit(200)); }
-  async function programmer(p) { return verifier(await sb.from('programmations').insert(p).select().single()); }
+  async function programmer(p) {
+    var r = verifier(await sb.from('programmations').insert(p).select().single());
+    notifierEnAttente();                       // l'équipe nommée est prévenue (et voit le chantier)
+    return r;
+  }
 
   // ------------------------------------------------------------ V2, lot C : fonctions serveur (Excel, notifications)
   async function appelerFonction(nom, corps) {
@@ -396,8 +400,9 @@
       coulage: p.coulage || null, chef: p.chef || null, chef_equipe: p.chef_equipe || null, compagnons: p.compagnons };
     var r = verifier(await sb.from('programmations').update(champs).eq('id', p.id).select('id'));
     if (!r.length) throw new Error('Modification impossible : une fiche a déjà été envoyée pour ces logements, ou ce n\'est pas votre programmation.');
+    notifierEnAttente();
   }
-  async function annulerProgrammation(id) { verifier(await sb.rpc('annuler_programmation', { pid: id })); }
+  async function annulerProgrammation(id) { verifier(await sb.rpc('annuler_programmation', { pid: id })); notifierEnAttente(); }
   async function retirerFiche(id, motif) {
     verifier(await sb.rpc('retirer_fiche', { fid: id, motif: motif }));
     appelerFonction('notifier', { fiche_id: id, evenement: 'retiree' }).catch(function () { return null; });   // patron, conducteur, auteur
@@ -413,6 +418,10 @@
   // prévient les bonnes personnes (calculées par le serveur) ; un échec ne bloque jamais l'appli
   function evenementFiche(id, evenement) {
     return appelerFonction('notifier', { fiche_id: id, evenement: evenement }).catch(function () { return null; });
+  }
+  // envoie ce que la base a noté (incorporation programmée, affectation, message pas encore arrivé sur cet appareil)
+  function notifierEnAttente() {
+    return appelerFonction('notifier', { evenement: 'en_attente' }).catch(function () { return null; });
   }
   async function abonnerPush(abonnement) {
     var j = abonnement.toJSON();
@@ -539,6 +548,7 @@
       var aRetirer = actuels.filter(function (x) { return affectes.indexOf(x) < 0; });
       if (aAjouter.length) verifier(await sb.from('affectations').insert(aAjouter.map(function (x) { return { chantier_id: ch.id, profile_id: x }; })));
       if (aRetirer.length) verifier(await sb.from('affectations').delete().eq('chantier_id', ch.id).in('profile_id', aRetirer));
+      if (aAjouter.length) notifierEnAttente();      // « Nouveau chantier » pour les personnes ajoutées
     }
     return { chantier: ch, avertissements: avert };
   }
@@ -577,7 +587,7 @@
     preparerExcel: preparerExcel, envoyerExcel: envoyerExcel, deposerExcelAlobees: deposerExcelAlobees, depotAlobees: depotAlobees,
     conditions: conditions, monPdfConditions: monPdfConditions,
     supprimerChantier: supprimerChantier, archiverChantier: archiverChantier, retirerPersonnel: retirerPersonnel,
-    modifierProgrammation: modifierProgrammation, annulerProgrammation: annulerProgrammation, retirerFiche: retirerFiche, evenementFiche: evenementFiche, abonnerPush: abonnerPush,
+    modifierProgrammation: modifierProgrammation, annulerProgrammation: annulerProgrammation, retirerFiche: retirerFiche, evenementFiche: evenementFiche, notifierEnAttente: notifierEnAttente, abonnerPush: abonnerPush,
     activationCompte: activationCompte, connexionPasskey: connexionPasskey, enregistrerPasskey: enregistrerPasskey,
     personnes: personnes, creerPersonne: creerPersonne, nouveauCode: nouveauCode, basculerCompte: basculerCompte, supprimerCompte: supprimerCompte,
     alobees: alobees, plansPerimes: plansPerimes,

@@ -33,9 +33,10 @@
     var abonnement = await reg.pushManager.getSubscription() ||
       await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cleServeur() });
     await root.Cloud.abonnerPush(abonnement);
+    root.Cloud.notifierEnAttente();            // ce qui est arrivé avant l'activation part maintenant
   }
   async function activer() {
-    if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications refusées sur ce téléphone.');
+    if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications refusées sur cet appareil.');
     await abonner();
   }
   // à chaque connexion : si les notifications sont déjà autorisées, ce téléphone est rattaché au compte connecté
@@ -47,9 +48,9 @@
   var TEXTES = {
     'ios-a-installer': 'Sur iPhone : touchez <b>Partager</b> ⬆ puis <b>« Sur l\'écran d\'accueil »</b>, et ouvrez l\'appli depuis son icône. Les notifications seront alors possibles.',
     'non-supporte': 'Ce navigateur ne reçoit pas les notifications. Les rappels restent visibles dans l\'appli.',
-    'refusees': 'Notifications bloquées : autorisez-les dans les réglages du téléphone pour cette appli.',
-    'actives': '✓ Ce téléphone reçoit les notifications (nouvelles fiches, corrections, validations, rappels de la veille).',
-    'inactives': 'Recevez une alerte pour les nouvelles fiches, les corrections, les validations et les rappels de la veille à 18 h.'
+    'refusees': 'Notifications bloquées : autorisez-les dans les réglages du téléphone (ou du navigateur sur PC) pour cette appli.',
+    'actives': '✓ Cet appareil reçoit les notifications : incorporations programmées, nouveaux chantiers, nouvelles fiches, corrections, validations, rappels de la veille.',
+    'inactives': 'Recevez une alerte sur ce téléphone ou ce PC : incorporations programmées, nouveaux chantiers, nouvelles fiches, corrections, validations et rappels de la veille à 18 h. Ce qui est arrivé avant l\'activation vous est envoyé aussitôt.'
   };
   // bloc de la feuille « Mon compte »
   function blocCompte(etatActuel) {
