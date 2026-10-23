@@ -96,16 +96,17 @@
       (d && d.erreur ? '<p class="muted centre">Alobees n\'a pas répondu au dernier essai : nouvel essai automatique cette nuit.</p>' : '');
   }
 
-  // retirer une fiche envoyée par erreur : l'auteur, le conducteur du chantier ou le patron, tant qu'elle n'est pas validée
+  // retirer une fiche : l'auteur ou le conducteur du chantier tant qu'elle n'est pas validée ; le patron, toujours (23/10)
   function peutRetirer(f) {
-    if (f.etat === 'validee' || f.etat === 'remplacee') return false;
     var p = ES.etat.profil, c = ES.assistant.chantier(f.chantier_id) || {};
+    if (f.etat === 'validee' || f.etat === 'remplacee') return p.role === 'admin';
     return f.created_by === ES.etat.monId || p.role === 'admin' || (p.role === 'conducteur' && c.conducteur_id === ES.etat.monId);
   }
   function feuilleRetirer() {
     var f = ES.etat.ficheOuverte;
     return '<div class="sheet__h"><strong>Retirer cette fiche ?</strong><button class="x" data-a="fermer-feuille" aria-label="Fermer">✕</button></div>' +
       '<p>La fiche <b>' + h(ES.assistant.lieu(f)) + '</b> est supprimée. Le patron, le conducteur et l\'auteur sont prévenus avec le motif ; la trace du retrait est gardée.</p>' +
+      (f.etat === 'validee' || f.etat === 'remplacee' ? '<p class="txt-ko">Fiche validée : l\'Excel déjà envoyé par mail ou déposé dans Alobees n\'est pas effacé.</p>' : '') +
       '<h5>Motif <small class="muted">obligatoire</small></h5>' +
       '<textarea rows="2" maxlength="500" data-saisie-feuille="motif" aria-label="Motif du retrait" placeholder="Ex. fiche en double, mauvais niveau">' + h(ES.etat.feuille.motif || '') + '</textarea>' +
       '<div class="foot__row foot__row--marge"><button class="btn btn--ghost" data-a="fermer-feuille">Annuler</button>' +
